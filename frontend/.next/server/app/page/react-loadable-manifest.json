@@ -1,1 +1,10 @@
-{}
+{
+  "[project]/node_modules/.pnpm/react-plotly.js@2.6.0_plotl_bd195fb554e6709fe479a9775d9a3072/node_modules/react-plotly.js/react-plotly.js [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/node_modules/.pnpm/react-plotly.js@2.6.0_plotl_bd195fb554e6709fe479a9775d9a3072/node_modules/react-plotly.js/react-plotly.js [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/91e49_plotly_js_dist_plotly_639d3415.js",
+      "static/chunks/node_modules__pnpm_b3ae04bd._.js",
+      "static/chunks/14177_react-plotly_js_react-plotly_5a55b967.js"
+    ]
+  }
+}

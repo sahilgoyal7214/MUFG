@@ -1,6 +1,7 @@
 'use client';
+import dynamic from 'next/dynamic';
 
-import Plot from 'react-plotly.js';
+const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 export default function RegulatorContent({ activeTab }) {
   const renderComplianceTab = () => (
