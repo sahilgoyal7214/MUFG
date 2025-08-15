@@ -2,8 +2,79 @@
 import dynamic from 'next/dynamic';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+import { useEffect, useState } from 'react';
+
+function ChatbotAssistant() {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { from: 'bot', text: 'Hi! How can I assist you today?' }
+  ]);
+  const [input, setInput] = useState('');
+
+  const handleSend = () => {
+    if (!input.trim()) return;
+    setMessages([...messages, { from: 'user', text: input }]);
+    setTimeout(() => {
+      setMessages(msgs => [...msgs, { from: 'bot', text: 'Thanks for your message! (Demo bot)' }]);
+    }, 500);
+    setInput('');
+  };
+
+  return (
+    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}>
+      <div style={{ display: open ? 'block' : 'none', width: 320, background: '#fff', borderRadius: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.12)', padding: 16 }}>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>Chatbot Assistant</div>
+        <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 8 }}>
+          {messages.map((msg, i) => (
+            <div key={i} style={{ textAlign: msg.from === 'bot' ? 'left' : 'right', marginBottom: 4 }}>
+              <span style={{ background: msg.from === 'bot' ? '#f3f4f6' : '#d1fae5', padding: '6px 12px', borderRadius: 8 }}>{msg.text}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex' }}>
+          <input
+            style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: 8, padding: 6, marginRight: 4 }}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
+            placeholder="Type your message..."
+          />
+          <button style={{ background: '#10b981', color: '#fff', borderRadius: 8, padding: '6px 12px', fontWeight: 600 }} onClick={handleSend}>Send</button>
+        </div>
+      </div>
+      <button
+        style={{ background: '#047857', color: '#fff', borderRadius: '50%', width: 56, height: 56, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', fontSize: 28, border: 'none', cursor: 'pointer' }}
+        onClick={() => setOpen(o => !o)}
+        aria-label="Open chatbot"
+      >💬</button>
+    </div>
+  );
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',');
+  return lines.slice(1).map(line => {
+    const values = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => {
+      obj[h] = values[i];
+    });
+    obj.Initials = obj.Name ? obj.Name.split(' ').map(n => n[0]).join('').toUpperCase() : '';
+    obj.InitialsColor = obj.Gender === 'Male' ? 'bg-blue-100' : obj.Gender === 'Female' ? 'bg-purple-100' : 'bg-green-100';
+    obj.InitialsText = obj.Gender === 'Male' ? 'text-blue-600' : obj.Gender === 'Female' ? 'text-purple-600' : 'text-green-600';
+    return obj;
+  });
+}
 
 export default function AdvisorContent({ activeTab }) {
+  const [clients, setClients] = useState([]);
+  useEffect(() => {
+    fetch('/dummy_clients.csv')
+      .then(res => res.text())
+      .then(text => setClients(parseCSV(text)));
+  }, []);
+
   const renderPortfolioTab = () => (
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
@@ -33,7 +104,7 @@ export default function AdvisorContent({ activeTab }) {
           </div>
         </div>
 
-        {/* Client List */}
+        {/* Client List - now uses dummy dataset */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Client Overview</h3>
@@ -48,61 +119,50 @@ export default function AdvisorContent({ activeTab }) {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Balance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Performance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Level</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Review</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Annual Income</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Savings</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Tolerance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Retirement Age Goal</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-medium text-sm">JS</span>
+                {clients.map((client) => (
+                  <tr key={client.User_ID}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.User_ID}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 ${client.InitialsColor} rounded-full flex items-center justify-center`}>
+                          <span className={`${client.InitialsText} font-medium text-sm`}>{client.Initials}</span>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">{client.Name}</p>
+                          <p className="text-sm text-gray-500">Age {client.Age}</p>
+                        </div>
                       </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">John Smith</p>
-                        <p className="text-sm text-gray-500">Age 45</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$185,400</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">+9.2%</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Medium</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Nov 15, 2024</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button className="text-green-600 hover:text-green-700 mr-3">View</button>
-                    <button className="text-blue-600 hover:text-blue-700">Edit</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                        <span className="text-purple-600 font-medium text-sm">MJ</span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">Mary Johnson</p>
-                        <p className="text-sm text-gray-500">Age 38</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$92,750</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">+6.8%</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Low</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-500">Oct 2, 2024</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button className="text-green-600 hover:text-green-700 mr-3">View</button>
-                    <button className="text-blue-600 hover:text-blue-700">Edit</button>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Annual_Income ? `$${client.Annual_Income}` : ''}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Current_Savings ? `$${client.Current_Savings}` : ''}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${client.Risk_Tolerance === 'Low' ? 'bg-green-100 text-green-800' : client.Risk_Tolerance === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{client.Risk_Tolerance}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Retirement_Age_Goal}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        className="text-green-600 hover:text-green-700 mr-3"
+                        onClick={() => {
+                          const reportHtml = `<!DOCTYPE html><html><head><title>Client Report</title><style>body{font-family:sans-serif;padding:2rem;}h2{color:#047857;}table{width:100%;border-collapse:collapse;}th,td{padding:8px 12px;border-bottom:1px solid #eee;}th{background:#f3f4f6;text-align:left;}tr:last-child td{border-bottom:none;}tr:nth-child(even){background:#f9fafb;}@media(max-width:600px){table,th,td{font-size:12px;}}</style></head><body><h2>Client Report</h2><table><tbody>${Object.entries(client).filter(([k]) => !['Initials','InitialsColor','InitialsText'].includes(k)).map(([key, value]) => `<tr><th>${key}</th><td>${value}</td></tr>`).join('')}</tbody></table></body></html>`;
+                          const win = window.open('', '_blank');
+                          win.document.write(reportHtml);
+                          win.document.close();
+                        }}
+                      >View</button>
+                      {/* Edit button removed for advisor */}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -111,65 +171,76 @@ export default function AdvisorContent({ activeTab }) {
     </div>
   );
 
-  const renderAnalyticsTab = () => (
-    <div className="p-8">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Portfolio Analytics</h2>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Distribution</h3>
-            <div className="h-80">
-              <Plot
-                data={[
-                  {
-                    x: ['0-5%', '5-10%', '10-15%', '15%+'],
-                    y: [23, 89, 102, 33],
-                    type: 'bar',
-                    marker: { color: '#10b981' },
-                    name: 'Number of Clients'
-                  }
-                ]}
-                layout={{
-                  title: 'Client Performance Distribution',
-                  xaxis: { title: 'Performance Range' },
-                  yaxis: { title: 'Number of Clients' },
-                  showlegend: false,
-                  margin: { t: 50, r: 20, b: 50, l: 50 }
-                }}
-                style={{ width: '100%', height: '100%' }}
-                config={{ displayModeBar: false }}
-              />
-            </div>
+const renderAnalyticsTab = () => (
+  <div className="p-8">
+    <div className="max-w-6xl mx-auto">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Portfolio Analytics</h2>
+      {/* Reuse the same table as portfolio */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Client Overview</h3>
+          <div className="flex space-x-2">
+            <input type="text" placeholder="Search clients..." className="border border-gray-300 rounded-lg px-3 py-2 text-sm"/>
+            <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
+              Add Client
+            </button>
           </div>
-          
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Risk Allocation</h3>
-            <div className="h-80">
-              <Plot
-                data={[
-                  {
-                    labels: ['Conservative', 'Moderate', 'Aggressive'],
-                    values: [35, 45, 20],
-                    type: 'pie',
-                    marker: { colors: ['#10b981', '#f59e0b', '#ef4444'] }
-                  }
-                ]}
-                layout={{
-                  title: 'Risk Profile Distribution',
-                  showlegend: true,
-                  legend: { orientation: 'h', y: -0.2 },
-                  margin: { t: 50, r: 20, b: 80, l: 20 }
-                }}
-                style={{ width: '100%', height: '100%' }}
-                config={{ displayModeBar: false }}
-              />
-            </div>
-          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Annual Income</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Savings</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Tolerance</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Retirement Age Goal</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {clients.map((client) => (
+                <tr key={client.User_ID}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.User_ID}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className={`w-8 h-8 ${client.InitialsColor} rounded-full flex items-center justify-center`}>
+                        <span className={`${client.InitialsText} font-medium text-sm`}>{client.Initials}</span>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">{client.Name}</p>
+                        <p className="text-sm text-gray-500">Age {client.Age}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Annual_Income ? `$${client.Annual_Income}` : ''}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Current_Savings ? `$${client.Current_Savings}` : ''}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${client.Risk_Tolerance === 'Low' ? 'bg-green-100 text-green-800' : client.Risk_Tolerance === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{client.Risk_Tolerance}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Retirement_Age_Goal}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      className="text-green-600 hover:text-green-700 mr-3"
+                      onClick={() => {
+                        // ...existing report logic...
+                        const reportHtml = `<!DOCTYPE html><html><head><title>Client Report</title><style>body{font-family:sans-serif;padding:2rem;}h2{color:#047857;}table{width:100%;border-collapse:collapse;}th,td{padding:8px 12px;border-bottom:1px solid #eee;}th{background:#f3f4f6;text-align:left;}tr:last-child td{border-bottom:none;}tr:nth-child(even){background:#f9fafb;}@media(max-width:600px){table,th,td{font-size:12px;}}.tab{display:inline-block;padding:8px 24px;margin-right:8px;border-radius:8px;cursor:pointer;background:#f3f4f6;color:#047857;font-weight:600;} .tab.active{background:#047857;color:#fff;} .tab-content{margin-top:24px;}</style><script>function showTab(tab){document.getElementById('tab-report').style.display=tab==='report'?'block':'none';document.getElementById('tab-transactions').style.display=tab==='transactions'?'block':'none';document.getElementById('tab-btn-report').classList.toggle('active',tab==='report');document.getElementById('tab-btn-transactions').classList.toggle('active',tab==='transactions');}</script></head><body><h2>Client Report</h2><div><span id='tab-btn-report' class='tab active' onclick='showTab("report")'>Full Report</span><span id='tab-btn-transactions' class='tab' onclick='showTab("transactions")'>Transaction History</span></div><div id='tab-report' class='tab-content'><table><tbody>${Object.entries(client).filter(([k]) => !['Initials','InitialsColor','InitialsText'].includes(k)).map(([key, value]) => `<tr><th>${key}</th><td>${value}</td></tr>`).join('')}</tbody></table></div><div id='tab-transactions' class='tab-content' style='display:none;'><table><thead><tr><th>Date</th><th>Transaction ID</th><th>Amount</th><th>Channel</th></tr></thead><tbody><tr><td>${client.Transaction_Date}</td><td>${client.Transaction_ID}</td><td>${client.Transaction_Amount}</td><td>${client.Transaction_Channel}</td></tr></tbody></table></div></body></html>`;
+                        const win = window.open('', '_blank');
+                        win.document.write(reportHtml);
+                        win.document.close();
+                      }}
+                    >View</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 
   const renderReportsTab = () => (
     <div className="p-8">
@@ -292,16 +363,25 @@ export default function AdvisorContent({ activeTab }) {
     </div>
   );
 
-  switch (activeTab) {
-    case 'advisorPortfolio':
-      return renderPortfolioTab();
-    case 'advisorAnalytics':
-      return renderAnalyticsTab();
-    case 'advisorReports':
-      return renderReportsTab();
-    case 'advisorTools':
-      return renderToolsTab();
-    default:
-      return renderPortfolioTab();
-  }
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'advisorPortfolio':
+        return renderPortfolioTab();
+      case 'advisorAnalytics':
+        return renderAnalyticsTab();
+      case 'advisorReports':
+        return renderReportsTab();
+      case 'advisorTools':
+        return renderToolsTab();
+      default:
+        return renderPortfolioTab();
+    }
+  };
+
+  return (
+    <>
+      {renderContent()}
+      <ChatbotAssistant />
+    </>
+  );
 }
