@@ -8,6 +8,7 @@ node_modules/
 package-lock.json
 yarn.lock
 npm-shrinkwrap.json
+pnpm-lock.yaml
 
 # Testing
 /coverage

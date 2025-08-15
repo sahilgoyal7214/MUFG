@@ -12,7 +12,6 @@ const userConfigs = {
     initials: 'MB',
     color: 'blue',
     navigation: [
-      { id: 'memberUpload', label: 'Upload Data', icon: 'upload' },
       { id: 'memberCharts', label: 'Explore Charts', icon: 'chart' },
       { id: 'memberAI', label: 'AI Assistant', icon: 'ai' },
       { id: 'memberExport', label: 'Export Report', icon: 'export' }
