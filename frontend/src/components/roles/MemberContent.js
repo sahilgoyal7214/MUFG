@@ -22,13 +22,15 @@
         chartType: 'scatter',
         isConfigured: true
       },
-      { id: 2, isConfigured: false },
-      { id: 3, isConfigured: false },
-      { id: 4, isConfigured: false }
+      { id: 2, isConfigured: false }
     ]);
+
+
+    
 
     // State for chart configuration modal
     const [showConfigModal, setShowConfigModal] = useState(false);
+
     const [editingChartId, setEditingChartId] = useState(null);
     const [tempConfig, setTempConfig] = useState({
       xAxis: 'age',
@@ -38,6 +40,8 @@
 
     // State for dropdown menus
     const [activeDropdown, setActiveDropdown] = useState(null);
+    
+    
 
     // Sample data for different variables
     const sampleData = {
@@ -132,10 +136,12 @@
       setShowConfigModal(true);
     };
 
+    
+
     // Handle opening config modal for editing existing chart
     const handleEditChart = (chartId) => {
       const chart = gridCharts.find(c => c.id === chartId);
-      setEditingChartId(chartId);
+      setEditingChartId(chartId)
       setTempConfig({
         xAxis: chart.xAxis,
         yAxis: chart.yAxis,
@@ -147,24 +153,62 @@
 
     // Handle saving chart configuration
     const handleSaveChart = () => {
-      setGridCharts(prev => prev.map(chart => 
-        chart.id === editingChartId 
-          ? { ...chart, ...tempConfig, isConfigured: true }
-          : chart
-      ));
-      setShowConfigModal(false);
-      setEditingChartId(null);
-    };
+  setGridCharts(prev => {
+    const updated = prev.map(chart =>
+      chart.id === editingChartId
+        ? { ...chart, ...tempConfig, isConfigured: true }
+        : chart
+    );
+
+    // Find the highest configured chart ID
+    const maxConfiguredId = Math.max(...updated.filter(c => c.isConfigured).map(c => c.id));
+
+    // If we don't already have all 4, add the next one
+    if (updated.length < 4 && maxConfiguredId === updated.length) {
+      updated.push({ id: updated.length + 1, isConfigured: false });
+    }
+
+    return updated;
+  });
+
+  setShowConfigModal(false);
+  setEditingChartId(null);
+};
+
 
     // Handle deleting chart
-    const handleDeleteChart = (chartId) => {
-      setGridCharts(prev => prev.map(chart => 
-        chart.id === chartId 
-          ? { id: chart.id, isConfigured: false }
-          : chart
-      ));
-      setActiveDropdown(null);
-    };
+    // Handle deleting chart (adjusts grid automatically)
+const handleDeleteChart = (chartId) => {
+  setGridCharts(prev => {
+    // remove the chart from the array
+    const updated = prev.filter(chart => chart.id !== chartId);
+
+    // reassign IDs so layout is sequential
+    const reIndexed = updated.map((chart, index) => ({
+      ...chart,
+      id: index + 1
+    }));
+
+    return reIndexed;
+  });
+
+  setActiveDropdown(null); // close the 3-dot menu
+};
+
+// Close dropdown when clicking outside
+useEffect(() => {
+  const handleClickOutside = (e) => {
+    // If click is inside a dropdown menu or toggle button, do nothing
+    if (e.target.closest('.dropdown-menu') || e.target.closest('.dropdown-toggle')) {
+      return;
+    }
+    setActiveDropdown(null);
+  };
+
+  document.addEventListener('click', handleClickOutside);
+  return () => document.removeEventListener('click', handleClickOutside);
+}, []);
+
 
     // Handle export chart (placeholder)
     const handleExportChart = (chartId) => {
@@ -173,11 +217,21 @@
     };
 
     // Close dropdown when clicking outside
-    useEffect(() => {
-      const handleClickOutside = () => setActiveDropdown(null);
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }, []);
+ // Outside click handler
+useEffect(() => {
+  const handleClickOutside = (e) => {
+    if (
+      e.target.closest(".dropdown-menu") || // inside menu
+      e.target.closest(".dropdown-toggle")  // menu button
+    ) {
+      return; // don't close
+    }
+    setActiveDropdown(null);
+  };
+
+  document.addEventListener("click", handleClickOutside);
+  return () => document.removeEventListener("click", handleClickOutside);
+}, []);
 
     const renderChartsTab = () => (
       <div className="p-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
@@ -196,54 +250,47 @@
                         {variableNames[chart.xAxis]} vs {variableNames[chart.yAxis]}
                       </h3>
                       <div className="relative">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveDropdown(activeDropdown === chart.id ? null : chart.id);
-                          }}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01"/>
-                          </svg>
-                        </button>
-                        
-                        {/* Dropdown Menu */}
-                        {activeDropdown === chart.id && (
-                          <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
-                            <div className="py-2">
-                              <button
-                                onClick={() => handleEditChart(chart.id)}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                              >
-                                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                </svg>
-                                Edit Chart
-                              </button>
-                              <button
-                                onClick={() => handleDeleteChart(chart.id)}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                              >
-                                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                </svg>
-                                Delete Chart
-                              </button>
-                              <button
-                                onClick={() => handleExportChart(chart.id)}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                              >
-                                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                                Export Chart
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      setActiveDropdown(activeDropdown === chart.id ? null : chart.id);
+    }}
+    className="p-2 hover:bg-gray-100 rounded-lg transition-colors dropdown-toggle"
+  >
+    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01"/>
+    </svg>
+  </button>
+  
+  {activeDropdown === chart.id && (
+    <div
+      className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50 dropdown-menu"
+      onClick={(e) => e.stopPropagation()} // ✅ prevent immediate close
+    >
+      <div className="py-2">
+        <button
+          onClick={() => handleEditChart(chart.id)}
+          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+        >
+          <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Edit Chart
+        </button>
+        <button
+          onClick={() => handleDeleteChart(chart.id)}
+          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+        >
+          <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Delete Chart
+        </button>
+      </div>
+    </div>
+  )}
+</div>
+ </div>
                     
                     {/* Chart Content */}
                     <div className="p-4">
@@ -251,9 +298,10 @@
                         <Plot
                           data={getChartData(chart)}
                           layout={{
-                            title: {
-                              text: `${variableNames[chart.xAxis]} vs ${variableNames[chart.yAxis]}`,
-                              font: { size: 14, family: 'Inter, system-ui, sans-serif', color: '#1f2937' }
+                            config: {
+                              responsive: true,
+                              displayModeBar: false,
+                              displaylogo: false,
                             },
                             xaxis: { 
                               title: { text: variableNames[chart.xAxis], font: { size: 12, color: '#6b7280' } },
@@ -266,16 +314,26 @@
                               linecolor: '#e5e7eb'
                             },
                             showlegend: false,
-                            margin: { t: 40, r: 20, b: 50, l: 70 },
+                            margin: { t:20, r: 20, b: 50, l: 70 },
                             plot_bgcolor: '#fafafa',
                             paper_bgcolor: 'white',
                             font: { family: 'Inter, system-ui, sans-serif' }
                           }}
                           style={{ width: '100%', height: '100%' }}
                           config={{ 
-                            displayModeBar: false,
-                            displaylogo: false
-                          }}
+  responsive: true,
+  displayModeBar: true,    // ✅ show toolbar
+  displaylogo: false,      // hides "Plotly" logo
+  modeBarButtonsToRemove: ["sendDataToCloud"],
+  toImageButtonOptions: {
+    format: "png", // can be 'svg', 'jpeg', 'webp'
+    filename: "chart",
+    height: 800,
+    width: 1200,
+    scale: 1
+  }
+}}
+
                         />
                       </div>
                     </div>
@@ -301,7 +359,8 @@
 
           {/* Chart Configuration Modal */}
           {showConfigModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-transparent backdrop-blur-sm
+   flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-bold text-gray-900">Configure Chart</h3>
