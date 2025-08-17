@@ -1,9 +1,9 @@
-'use client';
+  'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+  const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 export default function MemberContent({ activeTab, isDark, onToggleDark }) {
   // State for chart configuration
