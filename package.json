@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "description": "Pension Insights Platform - Backend API",
   "private": true,
+  "packageManager": "pnpm@8.0.0",
   "scripts": {
     "dev": "cd backend && pnpm run dev",
     "build": "cd backend && pnpm run build",
     "start": "cd backend && pnpm start",
-    "install:backend": "cd backend && pnpm install",
+    "install:all": "cd backend && pnpm install",
     "clean": "rm -rf backend/node_modules node_modules",
     "lint": "cd backend && pnpm run lint",
-    "test": "cd backend && pnpm test",
-    "install": "cd backend && pnpm install"
+    "test": "cd backend && pnpm test"
   },
   "engines": {
     "node": ">=18.0.0",

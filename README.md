@@ -105,18 +105,36 @@ JWT_EXPIRES_IN=7d
 
 ## 📡 API Endpoints
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/logout` - User logout
+### 📚 **Interactive API Documentation**
+**🚀 Swagger UI**: http://localhost:4000/api-docs
+- Test all endpoints directly in your browser
+- Comprehensive schemas and examples
+- Authentication testing with JWT tokens
 
-### Users
+**📋 API Overview**: http://localhost:4000/api
+- Complete endpoint listing
+- OpenAPI specification download
+
+### Authentication
+- `POST /api/auth/verify` - Verify JWT token
+- `GET /api/auth/me` - Get current user info
+
+### Users  
 - `GET /api/users/profile` - Get user profile
 - `PUT /api/users/profile` - Update user profile
 
-### Data
-- `GET /api/data/charts` - Get chart data
-- `POST /api/data/upload` - Upload data files
+### Members
+- `GET /api/members/:id` - Get member data
+- `PUT /api/members/:id` - Update member data
+
+### 💰 **KPI Calculations** (Your Financial Functions)
+- `POST /api/kpi/retirement-age` - Calculate retirement age projection
+- `POST /api/kpi/total-corpus` - Predict total retirement corpus
+- `POST /api/kpi/retirement-readiness` - Comprehensive readiness analysis
+
+### Analytics & Logs
+- `GET /api/analytics/*` - Business intelligence endpoints
+- `GET /api/logs/*` - Audit logs (Regulator access only)
 
 ## 🐳 Docker Support
 
