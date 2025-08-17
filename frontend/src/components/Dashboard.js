@@ -54,9 +54,18 @@ export default function Dashboard({ currentUser, username, onLogout }) {
     }
   }, [config]);
 
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.add('dark');
+      document.body.style.backgroundColor = '#111827';
+    } else {
+      document.body.classList.remove('dark');
+      document.body.style.backgroundColor = '';
+    }
+  }, [isDark]);
+
   const toggleTheme = () => {
-    setIsDark(!isDark);
-    document.body.classList.toggle('dark', !isDark);
+    setIsDark(prev => !prev);
   };
 
   const renderContent = () => {
