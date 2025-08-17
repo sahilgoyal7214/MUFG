@@ -5,10 +5,7 @@ import dynamic from 'next/dynamic';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
-export default function MemberContent({ activeTab }) {
-  // State for dark mode
-  const [darkMode, setDarkMode] = useState(false);
-
+export default function MemberContent({ activeTab, isDark, onToggleDark }) {
   // State for chart configuration
   const [chartConfig, setChartConfig] = useState({
     xAxis: 'age',
@@ -60,27 +57,12 @@ export default function MemberContent({ activeTab }) {
   // Color schemes
   const colorSchemes = {
     default: {
-      name: 'Ocean Blue',
-      colors: ['#3b82f6', '#8b5cf6', '#06d6a0', '#f72585', '#4cc9f0'],
-      gradient: 'from-blue-500 to-purple-500'
+      name: 'Default',
+      colors: ['#3b82f6', '#8b5cf6', '#06d6a0'],
+      gradient: 'from-blue-500 to-purple-400'
     },
-    sunset: {
-      name: 'Sunset',
-      colors: ['#ff6b6b', '#ffa726', '#ffcc02', '#ff8a65', '#ff7043'],
-      gradient: 'from-orange-500 to-red-500'
-    },
-    forest: {
-      name: 'Forest',
-      colors: ['#2d5016', '#3d7c47', '#4caf50', '#66bb6a', '#81c784'],
-      gradient: 'from-green-600 to-emerald-500'
-    },
-    midnight: {
-      name: 'Midnight',
-      colors: ['#1a1a2e', '#16213e', '#0f3460', '#533483', '#7209b7'],
-      gradient: 'from-gray-800 to-purple-600'
-    },
-    coral: {
-      name: 'Coral Reef',
+    vibrant: {
+      name: 'Vibrant',
       colors: ['#ff6b9d', '#c44569', '#f8b500', '#feca57', '#ff9ff3'],
       gradient: 'from-pink-500 to-orange-400'
     }
@@ -118,7 +100,7 @@ export default function MemberContent({ activeTab }) {
     total_annual_contribution: 'Total Annual Contribution ($)'
   };
 
-  // Sample AI insights - this will be replaced with actual API call
+  // Sample AI insights
   const getAIInsights = (chart) => {
     return [
       {
@@ -159,7 +141,7 @@ export default function MemberContent({ activeTab }) {
         marker: { 
           color: colors,
           size: 10,
-          line: { color: darkMode ? '#374151' : 'white', width: 2 },
+          line: { color: isDark ? '#374151' : 'white', width: 2 },
           opacity: 0.8
         },
         name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
@@ -172,7 +154,7 @@ export default function MemberContent({ activeTab }) {
         marker: { 
           color: colors[0],
           opacity: 0.8,
-          line: { color: darkMode ? '#374151' : 'white', width: 1 }
+          line: { color: isDark ? '#374151' : 'white', width: 1 }
         },
         name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
       }];
@@ -295,17 +277,6 @@ export default function MemberContent({ activeTab }) {
     setActiveDropdown(null);
   };
 
-  // Apply dark mode to body
-  useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add('dark');
-      document.body.style.backgroundColor = '#111827';
-    } else {
-      document.body.classList.remove('dark');
-      document.body.style.backgroundColor = '';
-    }
-  }, [darkMode]);
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -319,40 +290,27 @@ export default function MemberContent({ activeTab }) {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Common header component
+  const renderHeader = (title) => (
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        {title}
+      </h2>
+      
+    </div>
+  );
+
   const renderChartsTab = () => (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
+    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header with Dark Mode Toggle */}
-          <div className="flex justify-between items-center mb-6">
-            <h2 className={`text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent`}>
-              Chart Builder Dashboard
-            </h2>
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`p-3 rounded-xl transition-all duration-300 ${
-                darkMode 
-                  ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
-                  : 'bg-white text-gray-600 hover:bg-gray-50 shadow-lg'
-              }`}
-            >
-              {darkMode ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                </svg>
-              )}
-            </button>
-          </div>
+          {renderHeader('Chart Builder Dashboard')}
           
           {/* 4-Grid Chart Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {gridCharts.map((chart) => (
               <div key={chart.id} className={`rounded-2xl shadow-xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode 
+                isDark 
                   ? 'bg-gray-800 border-gray-700' 
                   : 'bg-white border-gray-100'
               }`}>
@@ -360,10 +318,10 @@ export default function MemberContent({ activeTab }) {
                   <>
                     {/* Chart Header with Options */}
                     <div className={`flex justify-between items-center p-4 border-b transition-colors duration-300 ${
-                      darkMode ? 'border-gray-700' : 'border-gray-200'
+                      isDark ? 'border-gray-700' : 'border-gray-200'
                     }`}>
                       <h3 className={`text-lg font-semibold truncate transition-colors duration-300 ${
-                        darkMode ? 'text-white' : 'text-gray-900'
+                        isDark ? 'text-white' : 'text-gray-900'
                       }`}>
                         {variableNames[chart.xAxis]} vs {variableNames[chart.yAxis]}
                       </h3>
@@ -372,7 +330,7 @@ export default function MemberContent({ activeTab }) {
                         <button
                           onClick={() => handleViewAIInsights(chart.id)}
                           className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
-                            darkMode 
+                            isDark 
                               ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700' 
                               : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600'
                           } transform hover:scale-105 shadow-lg`}
@@ -390,7 +348,7 @@ export default function MemberContent({ activeTab }) {
                               setActiveDropdown(activeDropdown === chart.id ? null : chart.id);
                             }}
                             className={`p-2 rounded-lg transition-all duration-300 dropdown-toggle ${
-                              darkMode 
+                              isDark 
                                 ? 'hover:bg-gray-700 text-gray-300' 
                                 : 'hover:bg-gray-100 text-gray-600'
                             }`}
@@ -402,7 +360,7 @@ export default function MemberContent({ activeTab }) {
                           
                           {activeDropdown === chart.id && (
                             <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl border z-50 dropdown-menu transition-all duration-300 ${
-                              darkMode 
+                              isDark 
                                 ? 'bg-gray-800 border-gray-600' 
                                 : 'bg-white border-gray-200'
                             }`} onClick={(e) => e.stopPropagation()}>
@@ -410,7 +368,7 @@ export default function MemberContent({ activeTab }) {
                                 <button
                                   onClick={() => handleEditChart(chart.id)}
                                   className={`w-full px-4 py-3 text-left text-sm flex items-center transition-colors duration-300 ${
-                                    darkMode 
+                                    isDark 
                                       ? 'text-gray-300 hover:bg-gray-700' 
                                       : 'text-gray-700 hover:bg-gray-50'
                                   }`}
@@ -423,7 +381,7 @@ export default function MemberContent({ activeTab }) {
                                 <button
                                   onClick={() => handleCustomizeChart(chart.id)}
                                   className={`w-full px-4 py-3 text-left text-sm flex items-center transition-colors duration-300 ${
-                                    darkMode 
+                                    isDark 
                                       ? 'text-gray-300 hover:bg-gray-700' 
                                       : 'text-gray-700 hover:bg-gray-50'
                                   }`}
@@ -436,7 +394,7 @@ export default function MemberContent({ activeTab }) {
                                 <button
                                   onClick={() => handleDeleteChart(chart.id)}
                                   className={`w-full px-4 py-3 text-left text-sm flex items-center transition-colors duration-300 ${
-                                    darkMode 
+                                    isDark 
                                       ? 'text-red-400 hover:bg-gray-700' 
                                       : 'text-red-600 hover:bg-gray-50'
                                   }`}
@@ -462,25 +420,25 @@ export default function MemberContent({ activeTab }) {
                             xaxis: { 
                               title: { 
                                 text: variableNames[chart.xAxis], 
-                                font: { size: 12, color: darkMode ? '#9ca3af' : '#6b7280' } 
+                                font: { size: 12, color: isDark ? '#9ca3af' : '#6b7280' } 
                               },
-                              gridcolor: darkMode ? '#374151' : '#f3f4f6',
-                              linecolor: darkMode ? '#4b5563' : '#e5e7eb',
-                              tickfont: { color: darkMode ? '#9ca3af' : '#6b7280' }
+                              gridcolor: isDark ? '#374151' : '#f3f4f6',
+                              linecolor: isDark ? '#4b5563' : '#e5e7eb',
+                              tickfont: { color: isDark ? '#9ca3af' : '#6b7280' }
                             },
                             yaxis: { 
                               title: { 
                                 text: variableNames[chart.yAxis], 
-                                font: { size: 12, color: darkMode ? '#9ca3af' : '#6b7280' } 
+                                font: { size: 12, color: isDark ? '#9ca3af' : '#6b7280' } 
                               },
-                              gridcolor: darkMode ? '#374151' : '#f3f4f6',
-                              linecolor: darkMode ? '#4b5563' : '#e5e7eb',
-                              tickfont: { color: darkMode ? '#9ca3af' : '#6b7280' }
+                              gridcolor: isDark ? '#374151' : '#f3f4f6',
+                              linecolor: isDark ? '#4b5563' : '#e5e7eb',
+                              tickfont: { color: isDark ? '#9ca3af' : '#6b7280' }
                             },
                             showlegend: false,
                             margin: { t: 20, r: 20, b: 50, l: 70 },
-                            plot_bgcolor: darkMode ? '#1f2937' : '#fafafa',
-                            paper_bgcolor: darkMode ? '#1f2937' : 'white',
+                            plot_bgcolor: isDark ? '#1f2937' : '#fafafa',
+                            paper_bgcolor: isDark ? '#1f2937' : 'white',
                             font: { family: 'Inter, system-ui, sans-serif' }
                           }}
                           style={{ width: '100%', height: '100%' }}
@@ -506,13 +464,13 @@ export default function MemberContent({ activeTab }) {
                   <div 
                     onClick={() => handleAddChart(chart.id)}
                     className={`h-96 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 group ${
-                      darkMode 
+                      isDark 
                         ? 'border-gray-600 hover:border-blue-500 hover:bg-gray-800/50' 
                         : 'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50'
                     }`}
                   >
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-all duration-300 shadow-lg ${
-                      darkMode 
+                      isDark 
                         ? 'bg-gradient-to-br from-blue-600 to-purple-600' 
                         : 'bg-gradient-to-br from-blue-500 to-purple-500'
                     }`}>
@@ -521,12 +479,12 @@ export default function MemberContent({ activeTab }) {
                       </svg>
                     </div>
                     <h3 className={`text-lg font-semibold transition-colors duration-300 ${
-                      darkMode 
+                      isDark 
                         ? 'text-gray-300 group-hover:text-blue-400' 
                         : 'text-gray-600 group-hover:text-blue-600'
                     }`}>Add Chart</h3>
                     <p className={`text-sm mt-2 transition-colors duration-300 ${
-                      darkMode 
+                      isDark 
                         ? 'text-gray-400 group-hover:text-blue-300' 
                         : 'text-gray-500 group-hover:text-blue-500'
                     }`}>Click to configure a new chart</p>
@@ -540,15 +498,15 @@ export default function MemberContent({ activeTab }) {
           {showAIInsightsModal && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
               <div className={`rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transition-all duration-300 ${
-                darkMode ? 'bg-gray-800' : 'bg-white'
+                isDark ? 'bg-gray-800' : 'bg-white'
               }`}>
                 {/* Modal Header */}
                 <div className={`flex justify-between items-center p-6 border-b transition-colors duration-300 ${
-                  darkMode ? 'border-gray-700' : 'border-gray-200'
+                  isDark ? 'border-gray-700' : 'border-gray-200'
                 }`}>
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      darkMode 
+                      isDark 
                         ? 'bg-gradient-to-br from-purple-600 to-blue-600' 
                         : 'bg-gradient-to-br from-purple-500 to-blue-500'
                     }`}>
@@ -558,11 +516,11 @@ export default function MemberContent({ activeTab }) {
                     </div>
                     <div>
                       <h3 className={`text-xl font-bold transition-colors duration-300 ${
-                        darkMode ? 'text-white' : 'text-gray-900'
+                        isDark ? 'text-white' : 'text-gray-900'
                       }`}>AI Insights</h3>
                       {activeInsightChartId && (
                         <p className={`text-sm transition-colors duration-300 ${
-                          darkMode ? 'text-gray-400' : 'text-gray-600'
+                          isDark ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           {(() => {
                             const chart = gridCharts.find(c => c.id === activeInsightChartId);
@@ -575,7 +533,7 @@ export default function MemberContent({ activeTab }) {
                   <button
                     onClick={() => setShowAIInsightsModal(false)}
                     className={`p-2 rounded-lg transition-all duration-300 ${
-                      darkMode 
+                      isDark 
                         ? 'hover:bg-gray-700 text-gray-300' 
                         : 'hover:bg-gray-100 text-gray-600'
                     }`}
@@ -590,14 +548,14 @@ export default function MemberContent({ activeTab }) {
                 <div className="p-6">
                   {/* Loading Animation */}
                   <div className={`mb-6 p-4 rounded-xl border-2 border-dashed transition-all duration-300 ${
-                    darkMode 
+                    isDark 
                       ? 'border-gray-600 bg-gray-800/30' 
                       : 'border-gray-300 bg-gray-50'
                   }`}>
                     <div className="flex items-center justify-center space-x-3 mb-3">
                       <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-500 border-t-transparent"></div>
                       <span className={`text-sm font-medium transition-colors duration-300 ${
-                        darkMode ? 'text-gray-300' : 'text-gray-700'
+                        isDark ? 'text-gray-300' : 'text-gray-700'
                       }`}>
                         Analyzing chart data with AI...
                       </span>
@@ -606,7 +564,7 @@ export default function MemberContent({ activeTab }) {
                       <div className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full animate-pulse" style={{width: '75%'}}></div>
                     </div>
                     <p className={`text-xs text-center transition-colors duration-300 ${
-                      darkMode ? 'text-gray-500' : 'text-gray-500'
+                      isDark ? 'text-gray-500' : 'text-gray-500'
                     }`}>
                       Processing patterns and generating insights...
                     </p>
@@ -616,13 +574,13 @@ export default function MemberContent({ activeTab }) {
                   <div className="space-y-4">
                     {getAIInsights().map((insight, index) => (
                       <div key={index} className={`p-4 rounded-xl border transition-all duration-300 hover:shadow-lg ${
-                        darkMode 
+                        isDark 
                           ? 'bg-gray-700/50 border-gray-600 hover:border-gray-500' 
                           : 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:border-blue-300'
                       }`}>
                         <div className="flex items-start space-x-4">
                           <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-lg ${
-                            darkMode 
+                            isDark 
                               ? 'bg-gray-600' 
                               : 'bg-white shadow-sm'
                           }`}>
@@ -630,12 +588,12 @@ export default function MemberContent({ activeTab }) {
                           </div>
                           <div className="flex-1">
                             <h4 className={`font-semibold mb-2 transition-colors duration-300 ${
-                              darkMode ? 'text-white' : 'text-gray-900'
+                              isDark ? 'text-white' : 'text-gray-900'
                             }`}>
                               {insight.title}
                             </h4>
                             <p className={`text-sm leading-relaxed transition-colors duration-300 ${
-                              darkMode ? 'text-gray-300' : 'text-gray-700'
+                              isDark ? 'text-gray-300' : 'text-gray-700'
                             }`}>
                               {insight.text}
                             </p>
@@ -650,7 +608,7 @@ export default function MemberContent({ activeTab }) {
                     <button
                       onClick={() => setShowAIInsightsModal(false)}
                       className={`flex-1 px-6 py-3 border-2 rounded-xl transition-all duration-300 ${
-                        darkMode 
+                        isDark 
                           ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
                           : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
@@ -659,7 +617,6 @@ export default function MemberContent({ activeTab }) {
                     </button>
                     <button
                       onClick={() => {
-                        // Here you would typically export or save the insights
                         console.log('Exporting insights...');
                       }}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
@@ -676,16 +633,16 @@ export default function MemberContent({ activeTab }) {
           {showConfigModal && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
               <div className={`rounded-2xl shadow-2xl max-w-md w-full p-6 transition-all duration-300 ${
-                darkMode ? 'bg-gray-800' : 'bg-white'
+                isDark ? 'bg-gray-800' : 'bg-white'
               }`}>
                 <div className="flex justify-between items-center mb-6">
                   <h3 className={`text-xl font-bold transition-colors duration-300 ${
-                    darkMode ? 'text-white' : 'text-gray-900'
+                    isDark ? 'text-white' : 'text-gray-900'
                   }`}>Configure Chart</h3>
                   <button
                     onClick={() => setShowConfigModal(false)}
                     className={`p-2 rounded-lg transition-all duration-300 ${
-                      darkMode 
+                      isDark 
                         ? 'hover:bg-gray-700 text-gray-300' 
                         : 'hover:bg-gray-100 text-gray-600'
                     }`}
@@ -700,32 +657,32 @@ export default function MemberContent({ activeTab }) {
                   {/* Chart Type */}
                   <div>
                     <label className={`block text-sm font-bold mb-3 transition-colors duration-300 ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
+                      isDark ? 'text-gray-200' : 'text-gray-700'
                     }`}>Chart Type</label>
                     <select 
                       className={`w-full border-2 rounded-xl px-4 py-3 transition-all duration-300 ${
-                        darkMode 
+                        isDark 
                           ? 'border-gray-600 bg-gray-700 text-white focus:border-blue-500' 
                           : 'border-gray-300 bg-white text-gray-900 focus:border-blue-500'
                       } focus:ring-2 focus:ring-blue-200`}
                       value={tempConfig.chartType}
                       onChange={(e) => setTempConfig({...tempConfig, chartType: e.target.value})}
                     >
-                      <option value="scatter">📊 Scatter Plot</option>
-                      <option value="bar">📈 Bar Chart</option>
-                      <option value="line">📉 Line Chart</option>
-                      <option value="histogram">📊 Histogram</option>
+                      <option value="scatter">Scatter Plot</option>
+                      <option value="bar">Bar Chart</option>
+                      <option value="line">Line Chart</option>
+                      <option value="histogram">Histogram</option>
                     </select>
                   </div>
 
                   {/* X-Axis */}
                   <div>
                     <label className={`block text-sm font-bold mb-3 transition-colors duration-300 ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
+                      isDark ? 'text-gray-200' : 'text-gray-700'
                     }`}>X-Axis Variable</label>
                     <select 
                       className={`w-full border-2 rounded-xl px-4 py-3 transition-all duration-300 ${
-                        darkMode 
+                        isDark 
                           ? 'border-gray-600 bg-gray-700 text-white focus:border-blue-500' 
                           : 'border-gray-300 bg-white text-gray-900 focus:border-blue-500'
                       } focus:ring-2 focus:ring-blue-200`}
@@ -741,11 +698,11 @@ export default function MemberContent({ activeTab }) {
                   {/* Y-Axis */}
                   <div>
                     <label className={`block text-sm font-bold mb-3 transition-colors duration-300 ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
+                      isDark ? 'text-gray-200' : 'text-gray-700'
                     }`}>Y-Axis Variable</label>
                     <select 
                       className={`w-full border-2 rounded-xl px-4 py-3 transition-all duration-300 ${
-                        darkMode 
+                        isDark 
                           ? 'border-gray-600 bg-gray-700 text-white focus:border-purple-500' 
                           : 'border-gray-300 bg-white text-gray-900 focus:border-purple-500'
                       } focus:ring-2 focus:ring-purple-200`}
@@ -761,7 +718,7 @@ export default function MemberContent({ activeTab }) {
                   {/* Color Scheme */}
                   <div>
                     <label className={`block text-sm font-bold mb-3 transition-colors duration-300 ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
+                      isDark ? 'text-gray-200' : 'text-gray-700'
                     }`}>Color Scheme</label>
                     <div className="grid grid-cols-2 gap-3">
                       {Object.entries(colorSchemes).map(([key, scheme]) => (
@@ -771,14 +728,14 @@ export default function MemberContent({ activeTab }) {
                           className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                             tempConfig.colorScheme === key
                               ? 'border-blue-500 ring-2 ring-blue-200'
-                              : darkMode 
+                              : isDark 
                                 ? 'border-gray-600 hover:border-gray-500' 
                                 : 'border-gray-300 hover:border-gray-400'
                           }`}
                         >
                           <div className={`w-full h-6 rounded-lg mb-2 bg-gradient-to-r ${scheme.gradient}`}></div>
                           <span className={`text-sm font-medium transition-colors duration-300 ${
-                            darkMode ? 'text-gray-300' : 'text-gray-700'
+                            isDark ? 'text-gray-300' : 'text-gray-700'
                           }`}>{scheme.name}</span>
                         </button>
                       ))}
@@ -788,12 +745,12 @@ export default function MemberContent({ activeTab }) {
                   {/* Show Insights Toggle */}
                   <div className="flex items-center justify-between">
                     <label className={`text-sm font-bold transition-colors duration-300 ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
+                      isDark ? 'text-gray-200' : 'text-gray-700'
                     }`}>Show AI Insights</label>
                     <button
                       onClick={() => setTempConfig({...tempConfig, showInsights: !tempConfig.showInsights})}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${
-                        tempConfig.showInsights ? 'bg-blue-600' : darkMode ? 'bg-gray-600' : 'bg-gray-300'
+                        tempConfig.showInsights ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'
                       }`}
                     >
                       <span
@@ -810,7 +767,7 @@ export default function MemberContent({ activeTab }) {
                   <button
                     onClick={() => setShowConfigModal(false)}
                     className={`flex-1 px-6 py-3 border-2 rounded-xl transition-all duration-300 ${
-                      darkMode 
+                      isDark 
                         ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
@@ -832,16 +789,16 @@ export default function MemberContent({ activeTab }) {
           {showCustomizeModal && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
               <div className={`rounded-2xl shadow-2xl max-w-lg w-full p-6 transition-all duration-300 ${
-                darkMode ? 'bg-gray-800' : 'bg-white'
+                isDark ? 'bg-gray-800' : 'bg-white'
               }`}>
                 <div className="flex justify-between items-center mb-6">
                   <h3 className={`text-xl font-bold transition-colors duration-300 ${
-                    darkMode ? 'text-white' : 'text-gray-900'
+                    isDark ? 'text-white' : 'text-gray-900'
                   }`}>Customize Style</h3>
                   <button
                     onClick={() => setShowCustomizeModal(false)}
                     className={`p-2 rounded-lg transition-all duration-300 ${
-                      darkMode 
+                      isDark 
                         ? 'hover:bg-gray-700 text-gray-300' 
                         : 'hover:bg-gray-100 text-gray-600'
                     }`}
@@ -856,8 +813,8 @@ export default function MemberContent({ activeTab }) {
                   {/* Color Schemes */}
                   <div>
                     <label className={`block text-sm font-bold mb-4 transition-colors duration-300 ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
-                    }`}>🎨 Choose Color Palette</label>
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Choose Color Palette</label>
                     <div className="grid grid-cols-1 gap-3">
                       {Object.entries(colorSchemes).map(([key, scheme]) => (
                         <button
@@ -866,7 +823,7 @@ export default function MemberContent({ activeTab }) {
                           className={`p-4 rounded-xl border-2 transition-all duration-300 flex items-center space-x-4 ${
                             tempConfig.colorScheme === key
                               ? 'border-blue-500 ring-2 ring-blue-200 transform scale-105'
-                              : darkMode 
+                              : isDark 
                                 ? 'border-gray-600 hover:border-gray-500' 
                                 : 'border-gray-300 hover:border-gray-400'
                           }`}
@@ -882,7 +839,7 @@ export default function MemberContent({ activeTab }) {
                           </div>
                           <div>
                             <span className={`font-semibold transition-colors duration-300 ${
-                              darkMode ? 'text-gray-200' : 'text-gray-900'
+                              isDark ? 'text-gray-200' : 'text-gray-900'
                             }`}>{scheme.name}</span>
                             {tempConfig.colorScheme === key && (
                               <div className="flex items-center mt-1">
@@ -901,12 +858,12 @@ export default function MemberContent({ activeTab }) {
                   {/* Custom Color Inputs */}
                   <div>
                     <label className={`block text-sm font-bold mb-4 transition-colors duration-300 ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
-                    }`}>🎯 Fine-tune Colors</label>
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Fine-tune Colors</label>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
-                          darkMode ? 'text-gray-400' : 'text-gray-600'
+                          isDark ? 'text-gray-400' : 'text-gray-600'
                         }`}>Primary</label>
                         <div className="flex items-center space-x-2">
                           <input
@@ -932,7 +889,7 @@ export default function MemberContent({ activeTab }) {
                               }
                             })}
                             className={`flex-1 text-xs px-2 py-2 rounded border transition-all duration-300 ${
-                              darkMode 
+                              isDark 
                                 ? 'bg-gray-700 border-gray-600 text-white' 
                                 : 'bg-white border-gray-300 text-gray-900'
                             }`}
@@ -941,7 +898,7 @@ export default function MemberContent({ activeTab }) {
                       </div>
                       <div>
                         <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
-                          darkMode ? 'text-gray-400' : 'text-gray-600'
+                          isDark ? 'text-gray-400' : 'text-gray-600'
                         }`}>Secondary</label>
                         <div className="flex items-center space-x-2">
                           <input
@@ -967,7 +924,7 @@ export default function MemberContent({ activeTab }) {
                               }
                             })}
                             className={`flex-1 text-xs px-2 py-2 rounded border transition-all duration-300 ${
-                              darkMode 
+                              isDark 
                                 ? 'bg-gray-700 border-gray-600 text-white' 
                                 : 'bg-white border-gray-300 text-gray-900'
                             }`}
@@ -976,7 +933,7 @@ export default function MemberContent({ activeTab }) {
                       </div>
                       <div>
                         <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
-                          darkMode ? 'text-gray-400' : 'text-gray-600'
+                          isDark ? 'text-gray-400' : 'text-gray-600'
                         }`}>Accent</label>
                         <div className="flex items-center space-x-2">
                           <input
@@ -1002,7 +959,7 @@ export default function MemberContent({ activeTab }) {
                               }
                             })}
                             className={`flex-1 text-xs px-2 py-2 rounded border transition-all duration-300 ${
-                              darkMode 
+                              isDark 
                                 ? 'bg-gray-700 border-gray-600 text-white' 
                                 : 'bg-white border-gray-300 text-gray-900'
                             }`}
@@ -1014,11 +971,11 @@ export default function MemberContent({ activeTab }) {
 
                   {/* Preview */}
                   <div className={`p-4 rounded-xl transition-all duration-300 ${
-                    darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
+                    isDark ? 'bg-gray-700/50' : 'bg-gray-50'
                   }`}>
                     <h4 className={`text-sm font-bold mb-3 transition-colors duration-300 ${
-                      darkMode ? 'text-gray-200' : 'text-gray-700'
-                    }`}>👁️ Color Preview</h4>
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Color Preview</h4>
                     <div className="flex space-x-2">
                       {(colorSchemes[tempConfig.colorScheme]?.colors || [
                         tempConfig.customColors?.primary,
@@ -1040,7 +997,7 @@ export default function MemberContent({ activeTab }) {
                   <button
                     onClick={() => setShowCustomizeModal(false)}
                     className={`flex-1 px-6 py-3 border-2 rounded-xl transition-all duration-300 ${
-                      darkMode 
+                      isDark 
                         ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
@@ -1062,39 +1019,18 @@ export default function MemberContent({ activeTab }) {
     </div>
   );
 
-  // Other tabs remain the same but with dark mode support
   const renderUploadTab = () => (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
+    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
       <div className="p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Data Upload & Preprocessing</h2>
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`p-3 rounded-xl transition-all duration-300 ${
-                darkMode 
-                  ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
-                  : 'bg-white text-gray-600 hover:bg-gray-50 shadow-lg'
-              }`}
-            >
-              {darkMode ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                </svg>
-              )}
-            </button>
-          </div>
+          {renderHeader('Data Upload & Preprocessing')}
           
-        {/* Upload Area */}
+          {/* Upload Area */}
           <div className={`rounded-2xl shadow-lg border p-8 mb-8 backdrop-blur-sm transition-all duration-300 ${
-            darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
           }`}>
             <div className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 group ${
-              darkMode 
+              isDark 
                 ? 'border-gray-600 hover:border-blue-500 hover:bg-gray-800/50' 
                 : 'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50'
             }`}>
@@ -1104,35 +1040,344 @@ export default function MemberContent({ activeTab }) {
                 </svg>
               </div>
               <h3 className={`text-xl font-bold mb-3 transition-colors duration-300 ${
-                darkMode ? 'text-white' : 'text-gray-900'
+                isDark ? 'text-white' : 'text-gray-900'
               }`}>Upload Pension Data</h3>
               <p className={`mb-6 transition-colors duration-300 ${
-                darkMode ? 'text-gray-400' : 'text-gray-600'
+                isDark ? 'text-gray-400' : 'text-gray-600'
               }`}>Drag and drop your CSV, Excel, or JSON files here</p>
               <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg">
                 Browse Files
               </button>
               <p className={`text-sm mt-3 transition-colors duration-300 ${
-                darkMode ? 'text-gray-500' : 'text-gray-500'
+                isDark ? 'text-gray-500' : 'text-gray-500'
               }`}>Supported formats: CSV, XLSX, JSON (Max 50MB)</p>
             </div>
           </div>
 
-          {/* Rest of upload tab content with dark mode classes... */}
+          {/* Data Processing Status */}
+          <div className={`rounded-2xl shadow-lg border p-6 mb-8 backdrop-blur-sm transition-all duration-300 ${
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}>Processing Status</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className={`text-sm transition-colors duration-300 ${
+                  isDark ? 'text-gray-300' : 'text-gray-700'
+                }`}>Data Validation</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                  <span className={`text-sm transition-colors duration-300 ${
+                    isDark ? 'text-green-400' : 'text-green-600'
+                  }`}>Complete</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm transition-colors duration-300 ${
+                  isDark ? 'text-gray-300' : 'text-gray-700'
+                }`}>Data Cleaning</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse"></div>
+                  <span className={`text-sm transition-colors duration-300 ${
+                    isDark ? 'text-yellow-400' : 'text-yellow-600'
+                  }`}>In Progress</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm transition-colors duration-300 ${
+                  isDark ? 'text-gray-300' : 'text-gray-700'
+                }`}>Feature Engineering</span>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-4 h-4 rounded-full transition-colors duration-300 ${
+                    isDark ? 'bg-gray-600' : 'bg-gray-300'
+                  }`}></div>
+                  <span className={`text-sm transition-colors duration-300 ${
+                    isDark ? 'text-gray-500' : 'text-gray-500'
+                  }`}>Pending</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Data Preview */}
+          <div className={`rounded-2xl shadow-lg border p-6 backdrop-blur-sm transition-all duration-300 ${
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}>Data Preview</h3>
+            <div className={`rounded-lg border transition-all duration-300 ${
+              isDark ? 'border-gray-600' : 'border-gray-200'
+            }`}>
+              <table className="w-full">
+                <thead className={`transition-colors duration-300 ${
+                  isDark ? 'bg-gray-700' : 'bg-gray-50'
+                }`}>
+                  <tr>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-300 ${
+                      isDark ? 'text-gray-300' : 'text-gray-500'
+                    }`}>Member ID</th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-300 ${
+                      isDark ? 'text-gray-300' : 'text-gray-500'
+                    }`}>Age</th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-300 ${
+                      isDark ? 'text-gray-300' : 'text-gray-500'
+                    }`}>Annual Income</th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-300 ${
+                      isDark ? 'text-gray-300' : 'text-gray-500'
+                    }`}>Contribution</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y transition-colors duration-300 ${
+                  isDark ? 'divide-gray-600' : 'divide-gray-200'
+                }`}>
+                  {[
+                    ['M001', '28', '$52,000', '$416'],
+                    ['M002', '34', '$65,000', '$520'],
+                    ['M003', '42', '$85,000', '$680'],
+                    ['M004', '29', '$55,000', '$440']
+                  ].map((row, index) => (
+                    <tr key={index}>
+                      {row.map((cell, cellIndex) => (
+                        <td key={cellIndex} className={`px-4 py-3 text-sm transition-colors duration-300 ${
+                          isDark ? 'text-gray-300' : 'text-gray-900'
+                        }`}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   const renderAITab = () => (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
-      {/* AI tab content with dark mode support... */}
+    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto">
+          {renderHeader('AI Analytics & Insights')}
+          
+          {/* AI Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {[
+              {
+                title: 'Predictive Modeling',
+                description: 'Forecast pension outcomes using advanced ML algorithms',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                  </svg>
+                ),
+                status: 'active'
+              },
+              {
+                title: 'Risk Assessment',
+                description: 'Identify potential risks in pension portfolios',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                  </svg>
+                ),
+                status: 'coming-soon'
+              },
+              {
+                title: 'Optimization Engine',
+                description: 'Suggest optimal contribution strategies',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                ),
+                status: 'beta'
+              }
+            ].map((feature, index) => (
+              <div key={index} className={`p-6 rounded-2xl border transition-all duration-300 hover:shadow-lg ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+              }`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
+                  feature.status === 'active' ? 'bg-green-100 text-green-600' :
+                  feature.status === 'beta' ? 'bg-yellow-100 text-yellow-600' :
+                  'bg-gray-100 text-gray-400'
+                }`}>
+                  {feature.icon}
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 transition-colors duration-300 ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>{feature.title}</h3>
+                <p className={`text-sm mb-4 transition-colors duration-300 ${
+                  isDark ? 'text-gray-400' : 'text-gray-600'
+                }`}>{feature.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    feature.status === 'active' ? 'bg-green-100 text-green-800' :
+                    feature.status === 'beta' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {feature.status === 'active' ? 'Active' :
+                     feature.status === 'beta' ? 'Beta' : 'Coming Soon'}
+                  </span>
+                  <button className={`text-sm px-4 py-2 rounded-lg transition-all duration-300 ${
+                    feature.status === 'active' 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  }`} disabled={feature.status !== 'active'}>
+                    {feature.status === 'active' ? 'Launch' : 'Soon'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* AI Insights Panel */}
+          <div className={`rounded-2xl shadow-lg border p-6 backdrop-blur-sm transition-all duration-300 ${
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-6 transition-colors duration-300 ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}>Latest AI Insights</h3>
+            <div className="space-y-4">
+              {getAIInsights().map((insight, index) => (
+                <div key={index} className={`p-4 rounded-xl border transition-all duration-300 ${
+                  isDark 
+                    ? 'bg-gray-700/50 border-gray-600' 
+                    : 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200'
+                }`}>
+                  <div className="flex items-start space-x-4">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-lg ${
+                      isDark ? 'bg-gray-600' : 'bg-white shadow-sm'
+                    }`}>
+                      {insight.icon}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className={`font-semibold mb-2 transition-colors duration-300 ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}>{insight.title}</h4>
+                      <p className={`text-sm leading-relaxed transition-colors duration-300 ${
+                        isDark ? 'text-gray-300' : 'text-gray-700'
+                      }`}>{insight.text}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
   const renderExportTab = () => (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
-      {/* Export tab content with dark mode support... */}
+    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto">
+          {renderHeader('Export & Reports')}
+          
+          {/* Export Options */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {[
+              {
+                title: 'PDF Report',
+                description: 'Generate comprehensive pension analysis reports',
+                format: 'PDF',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                )
+              },
+              {
+                title: 'Excel Export',
+                description: 'Export data and charts to Excel format',
+                format: 'XLSX',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                )
+              },
+              {
+                title: 'PowerPoint',
+                description: 'Create presentation-ready slides with charts',
+                format: 'PPTX',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"/>
+                  </svg>
+                )
+              }
+            ].map((exportOption, index) => (
+              <div key={index} className={`p-6 rounded-2xl border transition-all duration-300 hover:shadow-lg ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+              }`}>
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 text-white">
+                  {exportOption.icon}
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 transition-colors duration-300 ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>{exportOption.title}</h3>
+                <p className={`text-sm mb-4 transition-colors duration-300 ${
+                  isDark ? 'text-gray-400' : 'text-gray-600'
+                }`}>{exportOption.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs px-2 py-1 rounded-full transition-colors duration-300 ${
+                    isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                  }`}>{exportOption.format}</span>
+                  <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 text-sm">
+                    Export
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Export History */}
+          <div className={`rounded-2xl shadow-lg border p-6 backdrop-blur-sm transition-all duration-300 ${
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}>Export History</h3>
+            <div className="space-y-3">
+              {[
+                { name: 'Q4_2024_Pension_Report.pdf', date: '2024-12-15', size: '2.4 MB', status: 'completed' },
+                { name: 'Member_Analysis_Charts.xlsx', date: '2024-12-10', size: '1.8 MB', status: 'completed' },
+                { name: 'Board_Presentation.pptx', date: '2024-12-08', size: '5.2 MB', status: 'completed' }
+              ].map((file, index) => (
+                <div key={index} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 ${
+                  isDark ? 'border-gray-600 bg-gray-700/30' : 'border-gray-200 bg-gray-50'
+                }`}>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className={`font-medium transition-colors duration-300 ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}>{file.name}</h4>
+                      <p className={`text-sm transition-colors duration-300 ${
+                        isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>{file.date} • {file.size}</p>
+                    </div>
+                  </div>
+                  <button className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
+                    isDark 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                  }`}>
+                    Download
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 

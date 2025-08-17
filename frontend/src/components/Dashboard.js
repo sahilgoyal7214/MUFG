@@ -61,7 +61,7 @@ export default function Dashboard({ currentUser, username, onLogout }) {
   const renderContent = () => {
     switch (currentUser) {
       case 'member':
-        return <MemberContent activeTab={activeTab} />;
+        return <MemberContent activeTab={activeTab} isDark={isDark} />;
       case 'advisor':
         return <AdvisorContent activeTab={activeTab} />;
       case 'regulator':
@@ -75,39 +75,61 @@ export default function Dashboard({ currentUser, username, onLogout }) {
     <div className={isDark ? 'dark' : ''}>
       {/* Top Navigation */}
       <nav className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm">
-        <div className="flex items-center space-x-3">
-          <div className={`w-8 h-8 bg-${config.color}-600 rounded-lg flex items-center justify-center`}>
-            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Pension Insights</h1>
-            <p className="text-sm text-gray-500">{config.name}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-5 5v-5zM4 19h6v-2H4v2zM4 15h8v-2H4v2zM4 11h10V9H4v2zM4 7h12V5H4v2z"/>
-            </svg>
-          </button>
-          <button onClick={toggleTheme} className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-            </svg>
-          </button>
-          <button onClick={onLogout} className="flex items-center space-x-2 p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-            <div className={`w-8 h-8 bg-${config.color}-100 rounded-full flex items-center justify-center`}>
-              <span className={`text-${config.color}-600 font-medium text-sm`}>{config.initials}</span>
-            </div>
-            <span className="text-sm font-medium text-gray-700">{username}</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-            </svg>
-          </button>
-        </div>
-      </nav>
+  <div className="flex items-center space-x-3">
+    <div className={`w-8 h-8 bg-${config.color}-600 rounded-lg flex items-center justify-center`}>
+      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+      </svg>
+    </div>
+    <div>
+      <h1 className="text-xl font-semibold text-gray-900">Pension Insights</h1>
+      <p className="text-sm text-gray-500">{config.name}</p>
+    </div>
+  </div>
+  <div className="flex items-center space-x-4">
+    {/* Dark Mode Toggle */}
+   <button
+  onClick={toggleTheme}
+  className={`p-3 rounded-xl transition-all duration-300 ${
+    isDark 
+      ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
+      : 'bg-white text-gray-600 hover:bg-gray-50 shadow-lg'
+  }`}
+>
+  {isDark ? (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+      />
+    </svg>
+  ) : (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+      />
+    </svg>
+  )}
+</button>
+
+
+    {/* Logout Button */}
+    <button onClick={onLogout} className="flex items-center space-x-2 p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
+      <div className={`w-8 h-8 bg-${config.color}-100 rounded-full flex items-center justify-center`}>
+        <span className={`text-${config.color}-600 font-medium text-sm`}>{config.initials}</span>
+      </div>
+      <span className="text-sm font-medium text-gray-700">{username}</span>
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+    </button>
+  </div>
+</nav>
 
       <div className="flex h-screen">
         {/* Left Sidebar */}
