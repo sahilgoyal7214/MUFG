@@ -22,10 +22,11 @@ const userConfigs = {
     initials: 'AD',
     color: 'green',
     navigation: [
-      { id: 'advisorPortfolio', label: 'Client Portfolio', icon: 'users' },
-      { id: 'advisorAnalytics', label: 'Analytics', icon: 'chart' },
-      { id: 'advisorReports', label: 'Reports', icon: 'document' },
-      { id: 'advisorTools', label: 'Planning Tools', icon: 'tools' }
+  { id: 'advisorPortfolio', label: 'Client Portfolio', icon: 'users' },
+  { id: 'advisorAnalytics', label: 'Analytics', icon: 'chart' },
+  { id: 'advisorReports', label: 'Reports', icon: 'document' },
+  { id: 'advisorTools', label: 'Planning Tools', icon: 'tools' },
+  { id: 'advisorExploreCharts', label: 'Explore Charts', icon: 'chart' }
     ]
   },
   regulator: {
