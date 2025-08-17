@@ -11,7 +11,8 @@
     "install:frontend": "cd frontend && pnpm install",
     "clean": "rm -rf frontend/node_modules node_modules",
     "lint": "cd frontend && pnpm run lint",
-    "test": "cd frontend && pnpm test"
+    "test": "cd frontend && pnpm test",
+    "install": "cd frontend && pnpm install"
   },
   "engines": {
     "node": ">=18.0.0",

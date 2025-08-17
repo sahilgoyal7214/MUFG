@@ -22,10 +22,11 @@ const userConfigs = {
     initials: 'AD',
     color: 'green',
     navigation: [
-      { id: 'advisorPortfolio', label: 'Client Portfolio', icon: 'users' },
-      { id: 'advisorAnalytics', label: 'Analytics', icon: 'chart' },
-      { id: 'advisorReports', label: 'Reports', icon: 'document' },
-      { id: 'advisorTools', label: 'Planning Tools', icon: 'tools' }
+  { id: 'advisorPortfolio', label: 'Client Portfolio', icon: 'users' },
+  { id: 'advisorAnalytics', label: 'Analytics', icon: 'chart' },
+  { id: 'advisorReports', label: 'Reports', icon: 'document' },
+  { id: 'advisorTools', label: 'Planning Tools', icon: 'tools' },
+  { id: 'advisorExploreCharts', label: 'Explore Charts', icon: 'chart' }
     ]
   },
   regulator: {
@@ -53,9 +54,18 @@ export default function Dashboard({ currentUser, username, onLogout }) {
     }
   }, [config]);
 
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.add('dark');
+      document.body.style.backgroundColor = '#111827';
+    } else {
+      document.body.classList.remove('dark');
+      document.body.style.backgroundColor = '';
+    }
+  }, [isDark]);
+
   const toggleTheme = () => {
-    setIsDark(!isDark);
-    document.body.classList.toggle('dark', !isDark);
+    setIsDark(prev => !prev);
   };
 
   const renderContent = () => {
