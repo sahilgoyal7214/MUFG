@@ -2,6 +2,8 @@
 import dynamic from 'next/dynamic';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+const isDark = typeof document !== 'undefined' && document.body.classList.contains('dark');
+
 import { useEffect, useState } from 'react';
 
 function ChatbotAssistant() {
@@ -20,30 +22,84 @@ function ChatbotAssistant() {
     setInput('');
   };
 
+  // Detect dark mode from body class
   return (
     <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}>
-      <div style={{ display: open ? 'block' : 'none', width: 320, background: '#fff', borderRadius: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.12)', padding: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>Chatbot Assistant</div>
+      <div
+        style={{
+          display: open ? 'block' : 'none',
+          width: 320,
+          background: isDark ? '#1f2937' : '#fff',
+          borderRadius: 12,
+          boxShadow: '0 2px 16px rgba(0,0,0,0.12)',
+          padding: 16,
+          color: isDark ? '#f3f4f6' : '#111827',
+          border: isDark ? '1px solid #374151' : 'none'
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: 8, color: isDark ? '#f3f4f6' : '#111827' }}>Chatbot Assistant</div>
         <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 8 }}>
           {messages.map((msg, i) => (
             <div key={i} style={{ textAlign: msg.from === 'bot' ? 'left' : 'right', marginBottom: 4 }}>
-              <span style={{ background: msg.from === 'bot' ? '#f3f4f6' : '#d1fae5', padding: '6px 12px', borderRadius: 8 }}>{msg.text}</span>
+              <span style={{
+                background: msg.from === 'bot'
+                  ? (isDark ? '#374151' : '#f3f4f6')
+                  : (isDark ? '#047857' : '#d1fae5'),
+                color: msg.from === 'bot'
+                  ? (isDark ? '#f3f4f6' : '#111827')
+                  : (isDark ? '#fff' : '#047857'),
+                padding: '6px 12px',
+                borderRadius: 8,
+                display: 'inline-block',
+                fontWeight: msg.from === 'bot' ? 500 : 400
+              }}>{msg.text}</span>
             </div>
           ))}
         </div>
         <div style={{ display: 'flex' }}>
           <input
-            style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: 8, padding: 6, marginRight: 4 }}
+            style={{
+              flex: 1,
+              border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+              borderRadius: 8,
+              padding: 6,
+              marginRight: 4,
+              background: isDark ? '#111827' : '#fff',
+              color: isDark ? '#f3f4f6' : '#111827',
+              outline: 'none'
+            }}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
             placeholder="Type your message..."
           />
-          <button style={{ background: '#10b981', color: '#fff', borderRadius: 8, padding: '6px 12px', fontWeight: 600 }} onClick={handleSend}>Send</button>
+          <button
+            style={{
+              background: isDark ? '#10b981' : '#10b981',
+              color: isDark ? '#fff' : '#fff',
+              borderRadius: 8,
+              padding: '6px 12px',
+              fontWeight: 600,
+              border: 'none',
+              boxShadow: isDark ? '0 2px 8px rgba(16,185,129,0.15)' : '0 2px 8px rgba(16,185,129,0.12)',
+              cursor: 'pointer'
+            }}
+            onClick={handleSend}
+          >Send</button>
         </div>
       </div>
       <button
-        style={{ background: '#047857', color: '#fff', borderRadius: '50%', width: 56, height: 56, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', fontSize: 28, border: 'none', cursor: 'pointer' }}
+        style={{
+          background: isDark ? '#047857' : '#047857',
+          color: '#fff',
+          borderRadius: '50%',
+          width: 56,
+          height: 56,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+          fontSize: 28,
+          border: 'none',
+          cursor: 'pointer'
+        }}
         onClick={() => setOpen(o => !o)}
         aria-label="Open chatbot"
       >💬</button>
@@ -67,7 +123,7 @@ function parseCSV(text) {
   });
 }
 
-export default function AdvisorContent({ activeTab }) {
+export default function AdvisorContent({ activeTab, isDark }) {
   const [clients, setClients] = useState([]);
   useEffect(() => {
     fetch('/dummy_clients.csv')
@@ -117,15 +173,15 @@ export default function AdvisorContent({ activeTab }) {
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className={isDark ? "bg-gray-700" : "bg-gray-50"}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Annual Income</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Savings</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Tolerance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Retirement Age Goal</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>User ID</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Client</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Annual Income</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Current Savings</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Risk Tolerance</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Retirement Age Goal</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -234,15 +290,15 @@ export default function AdvisorContent({ activeTab }) {
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className={isDark ? "bg-gray-700" : "bg-gray-50"}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Annual Income</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Savings</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Tolerance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Retirement Age Goal</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>User ID</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Client</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Annual Income</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Current Savings</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Risk Tolerance</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Retirement Age Goal</th>
+                  <th className={isDark ? "px-6 py-3 text-left text-xs font-bold text-gray-200 uppercase" : "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"}>Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -270,7 +326,6 @@ export default function AdvisorContent({ activeTab }) {
                       <button
                         className="text-green-600 hover:text-green-700 mr-3"
                         onClick={() => {
-                          // ...existing report logic...
                           const reportHtml = `<!DOCTYPE html><html><head><title>Client Report</title><style>body{font-family:sans-serif;padding:2rem;}h2{color:#047857;}table{width:100%;border-collapse:collapse;}th,td{padding:8px 12px;border-bottom:1px solid #eee;}th{background:#f3f4f6;text-align:left;}tr:last-child td{border-bottom:none;}tr:nth-child(even){background:#f9fafb;}@media(max-width:600px){table,th,td{font-size:12px;}}.tab{display:inline-block;padding:8px 24px;margin-right:8px;border-radius:8px;cursor:pointer;background:#f3f4f6;color:#047857;font-weight:600;} .tab.active{background:#047857;color:#fff;} .tab-content{margin-top:24px;}</style><script>function showTab(tab){document.getElementById('tab-report').style.display=tab==='report'?'block':'none';document.getElementById('tab-transactions').style.display=tab==='transactions'?'block':'none';document.getElementById('tab-btn-report').classList.toggle('active',tab==='report');document.getElementById('tab-btn-transactions').classList.toggle('active',tab==='transactions');}</script></head><body><h2>Client Report</h2><div><span id='tab-btn-report' class='tab active' onclick='showTab("report")'>Full Report</span><span id='tab-btn-transactions' class='tab' onclick='showTab("transactions")'>Transaction History</span></div><div id='tab-report' class='tab-content'><table><tbody>${Object.entries(client).filter(([k]) => !['Initials', 'InitialsColor', 'InitialsText'].includes(k)).map(([key, value]) => `<tr><th>${key}</th><td>${value}</td></tr>`).join('')}</tbody></table></div><div id='tab-transactions' class='tab-content' style='display:none;'><table><thead><tr><th>Date</th><th>Transaction ID</th><th>Amount</th><th>Channel</th></tr></thead><tbody><tr><td>${client.Transaction_Date}</td><td>${client.Transaction_ID}</td><td>${client.Transaction_Amount}</td><td>${client.Transaction_Channel}</td></tr></tbody></table></div></body></html>`;
                           const win = window.open('', '_blank');
                           win.document.write(reportHtml);
@@ -526,7 +581,7 @@ export default function AdvisorContent({ activeTab }) {
       }
     }
     // Detect dark mode from body class
-    const isDark = typeof document !== 'undefined' && document.body.classList.contains('dark');
+    // const isDark = typeof document !== 'undefined' && document.body.classList.contains('dark');
     return (
       <div className={isDark ? 'p-8 min-h-screen bg-gray-900' : 'p-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen'}>
         <div className="max-w-7xl mx-auto">

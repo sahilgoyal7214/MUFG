@@ -73,9 +73,9 @@ export default function Dashboard({ currentUser, username, onLogout }) {
       case 'member':
         return <MemberContent activeTab={activeTab} isDark={isDark} />;
       case 'advisor':
-        return <AdvisorContent activeTab={activeTab} />;
+        return <AdvisorContent activeTab={activeTab} isDark={isDark} />;
       case 'regulator':
-        return <RegulatorContent activeTab={activeTab} />;
+        return <RegulatorContent activeTab={activeTab} isDark={isDark} />;
       default:
         return null;
     }
