@@ -525,38 +525,40 @@ export default function AdvisorContent({ activeTab }) {
         break;
       }
     }
+    // Detect dark mode from body class
+    const isDark = typeof document !== 'undefined' && document.body.classList.contains('dark');
     return (
-      <div className="p-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+      <div className={isDark ? 'p-8 min-h-screen bg-gray-900' : 'p-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen'}>
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">Explore Charts</h2>
+          <h2 className={isDark ? 'text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mb-6' : 'text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6'}>Explore Charts</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {visibleCharts.map((chart) => (
-              <div key={chart.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 backdrop-blur-sm relative">
+              <div key={chart.id} className={isDark ? 'bg-gray-800 rounded-2xl shadow-lg border border-gray-700 backdrop-blur-sm relative' : 'bg-white rounded-2xl shadow-lg border border-gray-100 backdrop-blur-sm relative'}>
                 {chart.isConfigured ? (
                   <>
-                    <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                    <div className={isDark ? 'flex justify-between items-center p-4 border-b border-gray-700' : 'flex justify-between items-center p-4 border-b border-gray-200'}>
+                      <h3 className={isDark ? 'text-lg font-semibold text-white truncate' : 'text-lg font-semibold text-gray-900 truncate'}>
                         {variableNames[chart.xAxis]} vs {variableNames[chart.yAxis]}
                       </h3>
                       <div className="relative">
                         <button
                           onClick={e => { e.stopPropagation(); setActiveDropdown(chart.id); }}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors dropdown-toggle"
+                          className={isDark ? 'p-2 hover:bg-gray-700 rounded-lg transition-colors dropdown-toggle' : 'p-2 hover:bg-gray-100 rounded-lg transition-colors dropdown-toggle'}
                         >
-                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={isDark ? 'w-5 h-5 text-gray-300' : 'w-5 h-5 text-gray-600'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01"/>
                           </svg>
                         </button>
                         {activeDropdown === chart.id && (
-                          <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50 dropdown-menu" onClick={e => e.stopPropagation()}>
+                          <div className={isDark ? 'absolute right-0 top-full mt-2 w-48 bg-gray-800 rounded-xl shadow-lg border border-gray-700 z-50 dropdown-menu' : 'absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50 dropdown-menu'} onClick={e => e.stopPropagation()}>
                             <div className="py-2">
-                              <button onClick={() => handleEditChart(chart.id)} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                              <button onClick={() => handleEditChart(chart.id)} className={isDark ? 'w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex items-center' : 'w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center'}>
                                 <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
                                 Edit Chart
                               </button>
-                              <button onClick={() => handleDeleteChart(chart.id)} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                              <button onClick={() => handleDeleteChart(chart.id)} className={isDark ? 'w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex items-center' : 'w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center'}>
                                 <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>
@@ -573,12 +575,12 @@ export default function AdvisorContent({ activeTab }) {
                           data={getChartData(chart)}
                           layout={{
                             config: { responsive: true, displayModeBar: false, displaylogo: false },
-                            xaxis: { title: { text: variableNames[chart.xAxis], font: { size: 12, color: '#6b7280' } }, gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
-                            yaxis: { title: { text: variableNames[chart.yAxis], font: { size: 12, color: '#6b7280' } }, gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
+                            xaxis: { title: { text: variableNames[chart.xAxis], font: { size: 12, color: isDark ? '#9ca3af' : '#6b7280' } }, gridcolor: isDark ? '#374151' : '#f3f4f6', linecolor: isDark ? '#4b5563' : '#e5e7eb', tickfont: { color: isDark ? '#9ca3af' : '#6b7280' } },
+                            yaxis: { title: { text: variableNames[chart.yAxis], font: { size: 12, color: isDark ? '#9ca3af' : '#6b7280' } }, gridcolor: isDark ? '#374151' : '#f3f4f6', linecolor: isDark ? '#4b5563' : '#e5e7eb', tickfont: { color: isDark ? '#9ca3af' : '#6b7280' } },
                             showlegend: false,
                             margin: { t:20, r: 20, b: 50, l: 70 },
-                            plot_bgcolor: '#fafafa',
-                            paper_bgcolor: 'white',
+                            plot_bgcolor: isDark ? '#1f2937' : '#fafafa',
+                            paper_bgcolor: isDark ? '#1f2937' : 'white',
                             font: { family: 'Inter, system-ui, sans-serif' }
                           }}
                           style={{ width: '100%', height: '100%' }}
@@ -588,25 +590,25 @@ export default function AdvisorContent({ activeTab }) {
                     </div>
                   </>
                 ) : (
-                  <div onClick={() => handleAddChart(chart.id)} className="h-96 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 transition-all group">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                  <div onClick={() => handleAddChart(chart.id)} className={isDark ? 'h-96 border-2 border-dashed border-gray-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-gray-800/50 transition-all group' : 'h-96 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 transition-all group'}>
+                    <div className={isDark ? 'w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg' : 'w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg'}>
                       <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                       </svg>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-600 group-hover:text-blue-600 transition-colors">Add Chart</h3>
-                    <p className="text-sm text-gray-500 group-hover:text-blue-500 transition-colors mt-2">Click to configure a new chart</p>
+                    <h3 className={isDark ? 'text-lg font-semibold text-gray-300 group-hover:text-blue-400 transition-colors' : 'text-lg font-semibold text-gray-600 group-hover:text-blue-600 transition-colors'}>Add Chart</h3>
+                    <p className={isDark ? 'text-sm text-gray-400 group-hover:text-blue-300 transition-colors mt-2' : 'text-sm text-gray-500 group-hover:text-blue-500 transition-colors mt-2'}>Click to configure a new chart</p>
                   </div>
                 )}
               </div>
             ))}
           </div>
           {showConfigModal && (
-            <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className={isDark ? 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4' : 'fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4'}>
+              <div className={isDark ? 'bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6' : 'bg-white rounded-2xl shadow-2xl max-w-md w-full p-6'}>
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-900">Configure Chart</h3>
-                  <button onClick={() => setShowConfigModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <h3 className={isDark ? 'text-xl font-bold text-white' : 'text-xl font-bold text-gray-900'}>Configure Chart</h3>
+                  <button onClick={() => setShowConfigModal(false)} className={isDark ? 'p-2 hover:bg-gray-700 rounded-lg transition-colors' : 'p-2 hover:bg-gray-100 rounded-lg transition-colors'}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -614,8 +616,8 @@ export default function AdvisorContent({ activeTab }) {
                 </div>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Chart Type</label>
-                    <select className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" value={tempConfig.chartType} onChange={e => setTempConfig({ ...tempConfig, chartType: e.target.value })}>
+                    <label className={isDark ? 'block text-sm font-bold text-gray-200 mb-3' : 'block text-sm font-bold text-gray-700 mb-3'}>Chart Type</label>
+                    <select className={isDark ? 'w-full border-2 border-gray-600 bg-gray-700 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all' : 'w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all'} value={tempConfig.chartType} onChange={e => setTempConfig({ ...tempConfig, chartType: e.target.value })}>
                       <option value="scatter">📊 Scatter Plot</option>
                       <option value="bar">📈 Bar Chart</option>
                       <option value="line">📉 Line Chart</option>
@@ -623,16 +625,16 @@ export default function AdvisorContent({ activeTab }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">X-Axis Variable</label>
-                    <select className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" value={tempConfig.xAxis} onChange={e => setTempConfig({ ...tempConfig, xAxis: e.target.value })}>
+                    <label className={isDark ? 'block text-sm font-bold text-gray-200 mb-3' : 'block text-sm font-bold text-gray-700 mb-3'}>X-Axis Variable</label>
+                    <select className={isDark ? 'w-full border-2 border-gray-600 bg-gray-700 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all' : 'w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all'} value={tempConfig.xAxis} onChange={e => setTempConfig({ ...tempConfig, xAxis: e.target.value })}>
                       {Object.entries(variableNames).map(([key, label]) => (
                         <option key={key} value={key}>{label}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Y-Axis Variable</label>
-                    <select className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all" value={tempConfig.yAxis} onChange={e => setTempConfig({ ...tempConfig, yAxis: e.target.value })}>
+                    <label className={isDark ? 'block text-sm font-bold text-gray-200 mb-3' : 'block text-sm font-bold text-gray-700 mb-3'}>Y-Axis Variable</label>
+                    <select className={isDark ? 'w-full border-2 border-gray-600 bg-gray-700 text-white rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all' : 'w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all'} value={tempConfig.yAxis} onChange={e => setTempConfig({ ...tempConfig, yAxis: e.target.value })}>
                       {Object.entries(variableNames).map(([key, label]) => (
                         <option key={key} value={key}>{label}</option>
                       ))}
@@ -640,8 +642,8 @@ export default function AdvisorContent({ activeTab }) {
                   </div>
                 </div>
                 <div className="flex space-x-4 mt-8">
-                  <button onClick={() => setShowConfigModal(false)} className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all">Cancel</button>
-                  <button onClick={handleSaveChart} className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg">Save Chart</button>
+                  <button onClick={() => setShowConfigModal(false)} className={isDark ? 'flex-1 px-6 py-3 border-2 border-gray-600 text-gray-300 rounded-xl hover:bg-gray-700 transition-all' : 'flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all'}>Cancel</button>
+                  <button onClick={handleSaveChart} className={isDark ? 'flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg' : 'flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg'}>Save Chart</button>
                 </div>
               </div>
             </div>
