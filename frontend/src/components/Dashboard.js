@@ -128,16 +128,16 @@ export default function Dashboard({ currentUser, username, onLogout }) {
 </button>
 
 
-    {/* Logout Button */}
-    <button onClick={onLogout} className="flex items-center space-x-2 p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-      <div className={`w-8 h-8 bg-${config.color}-100 rounded-full flex items-center justify-center`}>
-        <span className={`text-${config.color}-600 font-medium text-sm`}>{config.initials}</span>
-      </div>
-      <span className="text-sm font-medium text-gray-700">{username}</span>
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-      </svg>
-    </button>
+        {/* Logout Button - dark mode compatible */}
+        <button onClick={onLogout} className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-300 ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'hover:bg-gray-100'} group`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? 'bg-gray-700' : `bg-${config.color}-100`}`}>
+            <span className={`font-medium text-sm ${isDark ? 'text-white' : `text-${config.color}-600`}`}>{config.initials}</span>
+          </div>
+          <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-700'}`}>{username}</span>
+          <svg className={`w-4 h-4 ${isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-500 group-hover:text-gray-700'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </button>
   </div>
 </nav>
 
