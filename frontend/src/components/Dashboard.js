@@ -61,49 +61,47 @@ const userConfigs = {
   },
 };
 
-export default function Dashboard({ currentUser, username, onLogout }) {
+// Mock Navigation Component
+
+
+// Mock Content Components
+export default function Dashboard({ currentUser = 'member', username = 'Demo User', onLogout = () => {} }) {
   const [activeTab, setActiveTab] = useState('');
   const [isDark, setIsDark] = useState(false);
   const [userToggled, setUserToggled] = useState(false);
+  const [themePreference, setThemePreference] = useState(null); // Store user preference in memory
 
   const config = userConfigs[currentUser];
   const themeColors = colorMap[config.color];
 
-  // Load saved theme or system default
+  // Initialize theme based on system preference
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setIsDark(savedTheme === 'dark');
-      setUserToggled(true);
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDark(prefersDark);
-    }
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setIsDark(prefersDark);
   }, []);
 
-  // Apply dark class + save if user toggled
+  // Apply dark class to document
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-    if (userToggled) {
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    }
-  }, [isDark, userToggled]);
+  }, [isDark]);
 
-  // Watch for system changes if no override
+  // Watch for system theme changes (only if user hasn't manually toggled)
   useEffect(() => {
     const darkModeMedia = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => {
-      if (!userToggled) setIsDark(e.matches);
+      if (!userToggled) {
+        setIsDark(e.matches);
+      }
     };
     darkModeMedia.addEventListener('change', handleChange);
     return () => darkModeMedia.removeEventListener('change', handleChange);
   }, [userToggled]);
 
-  // Default tab
+  // Set default tab
   useEffect(() => {
     if (config && config.navigation.length > 0) {
       setActiveTab(config.navigation[0].id);
@@ -112,7 +110,9 @@ export default function Dashboard({ currentUser, username, onLogout }) {
 
   const toggleTheme = () => {
     setUserToggled(true);
-    setIsDark((prev) => !prev);
+    const newTheme = !isDark;
+    setIsDark(newTheme);
+    setThemePreference(newTheme ? 'dark' : 'light');
   };
 
   const renderContent = () => {
@@ -129,7 +129,7 @@ export default function Dashboard({ currentUser, username, onLogout }) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
+    <div className="h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Top Navigation */}
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center shadow-sm">
         <div className="flex items-center space-x-3">
@@ -153,6 +153,7 @@ export default function Dashboard({ currentUser, username, onLogout }) {
                 ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 shadow-lg'
             }`}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +207,7 @@ export default function Dashboard({ currentUser, username, onLogout }) {
       {/* Body */}
       <div className="flex flex-1">
         <Navigation config={config} activeTab={activeTab} onTabChange={setActiveTab} />
-        <main className="flex-1 overflow-auto p-4">{renderContent()}</main>
+        <main className="flex-1 overflow-auto p-4 bg-white dark:bg-gray-900">{renderContent()}</main>
       </div>
     </div>
   );
