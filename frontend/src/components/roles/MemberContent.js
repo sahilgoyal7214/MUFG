@@ -856,118 +856,155 @@ export default function MemberContent({ activeTab, isDark, onToggleDark }) {
                   </div>
 
                   {/* Custom Color Inputs */}
-                  <div>
-                    <label className={`block text-sm font-bold mb-4 transition-colors duration-300 ${
-                      isDark ? 'text-gray-200' : 'text-gray-700'
-                    }`}>Fine-tune Colors</label>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>Primary</label>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="color"
-                            value={tempConfig.customColors?.primary || '#3b82f6'}
-                            onChange={(e) => setTempConfig({
-                              ...tempConfig,
-                              customColors: {
-                                ...tempConfig.customColors,
-                                primary: e.target.value
-                              }
-                            })}
-                            className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={tempConfig.customColors?.primary || '#3b82f6'}
-                            onChange={(e) => setTempConfig({
-                              ...tempConfig,
-                              customColors: {
-                                ...tempConfig.customColors,
-                                primary: e.target.value
-                              }
-                            })}
-                            className={`flex-1 text-xs px-2 py-2 rounded border transition-all duration-300 ${
-                              isDark 
-                                ? 'bg-gray-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>Secondary</label>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="color"
-                            value={tempConfig.customColors?.secondary || '#8b5cf6'}
-                            onChange={(e) => setTempConfig({
-                              ...tempConfig,
-                              customColors: {
-                                ...tempConfig.customColors,
-                                secondary: e.target.value
-                              }
-                            })}
-                            className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={tempConfig.customColors?.secondary || '#8b5cf6'}
-                            onChange={(e) => setTempConfig({
-                              ...tempConfig,
-                              customColors: {
-                                ...tempConfig.customColors,
-                                secondary: e.target.value
-                              }
-                            })}
-                            className={`flex-1 text-xs px-2 py-2 rounded border transition-all duration-300 ${
-                              isDark 
-                                ? 'bg-gray-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>Accent</label>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="color"
-                            value={tempConfig.customColors?.accent || '#06d6a0'}
-                            onChange={(e) => setTempConfig({
-                              ...tempConfig,
-                              customColors: {
-                                ...tempConfig.customColors,
-                                accent: e.target.value
-                              }
-                            })}
-                            className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={tempConfig.customColors?.accent || '#06d6a0'}
-                            onChange={(e) => setTempConfig({
-                              ...tempConfig,
-                              customColors: {
-                                ...tempConfig.customColors,
-                                accent: e.target.value
-                              }
-                            })}
-                            className={`flex-1 text-xs px-2 py-2 rounded border transition-all duration-300 ${
-                              isDark 
-                                ? 'bg-gray-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Custom Color Inputs */}
+<div>
+  <label
+    className={`block text-sm font-bold mb-4 transition-colors duration-300 ${
+      isDark ? 'text-gray-200' : 'text-gray-700'
+    }`}
+  >
+    Fine-tune Colors
+  </label>
+
+  <div className="grid grid-cols-3 gap-6">
+    {/* Primary */}
+    <div className="w-full">
+      <label
+        className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        }`}
+      >
+        Primary
+      </label>
+      <div className="flex items-center space-x-2">
+        <input
+          type="color"
+          value={tempConfig.customColors?.primary || '#3b82f6'}
+          onChange={(e) =>
+            setTempConfig({
+              ...tempConfig,
+              customColors: {
+                ...tempConfig.customColors,
+                primary: e.target.value,
+              },
+            })
+          }
+          className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer flex-shrink-0"
+        />
+        <input
+          type="text"
+          value={tempConfig.customColors?.primary || '#3b82f6'}
+          onChange={(e) =>
+            setTempConfig({
+              ...tempConfig,
+              customColors: {
+                ...tempConfig.customColors,
+                primary: e.target.value,
+              },
+            })
+          }
+          className={`w-full text-xs px-2 py-2 rounded border transition-all duration-300 ${
+            isDark
+              ? 'bg-gray-700 border-gray-600 text-white'
+              : 'bg-white border-gray-300 text-gray-900'
+          }`}
+        />
+      </div>
+    </div>
+
+    {/* Secondary */}
+    <div className="w-full">
+      <label
+        className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        }`}
+      >
+        Secondary
+      </label>
+      <div className="flex items-center space-x-2">
+        <input
+          type="color"
+          value={tempConfig.customColors?.secondary || '#8b5cf6'}
+          onChange={(e) =>
+            setTempConfig({
+              ...tempConfig,
+              customColors: {
+                ...tempConfig.customColors,
+                secondary: e.target.value,
+              },
+            })
+          }
+          className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer flex-shrink-0"
+        />
+        <input
+          type="text"
+          value={tempConfig.customColors?.secondary || '#8b5cf6'}
+          onChange={(e) =>
+            setTempConfig({
+              ...tempConfig,
+              customColors: {
+                ...tempConfig.customColors,
+                secondary: e.target.value,
+              },
+            })
+          }
+          className={`w-full text-xs px-2 py-2 rounded border transition-all duration-300 ${
+            isDark
+              ? 'bg-gray-700 border-gray-600 text-white'
+              : 'bg-white border-gray-300 text-gray-900'
+          }`}
+        />
+      </div>
+    </div>
+
+    {/* Accent */}
+    <div className="w-full">
+      <label
+        className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        }`}
+      >
+        Accent
+      </label>
+      <div className="flex items-center space-x-2">
+        <input
+          type="color"
+          value={tempConfig.customColors?.accent || '#06d6a0'}
+          onChange={(e) =>
+            setTempConfig({
+              ...tempConfig,
+              customColors: {
+                ...tempConfig.customColors,
+                accent: e.target.value,
+              },
+            })
+          }
+          className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer flex-shrink-0"
+        />
+        <input
+          type="text"
+          value={tempConfig.customColors?.accent || ''}
+          placeholder="#RRGGBB"
+          onChange={(e) =>
+            setTempConfig({
+              ...tempConfig,
+              customColors: {
+                ...tempConfig.customColors,
+                accent: e.target.value,
+              },
+            })
+          }
+          className={`w-full text-xs px-2 py-2 rounded border transition-all duration-300 ${
+            isDark
+              ? 'bg-gray-700 border-gray-600 text-white'
+              : 'bg-white border-gray-300 text-gray-900'
+          }`}
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
 
                   {/* Preview */}
                   <div className={`p-4 rounded-xl transition-all duration-300 ${

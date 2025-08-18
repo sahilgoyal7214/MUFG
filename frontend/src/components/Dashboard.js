@@ -22,11 +22,11 @@ const userConfigs = {
     initials: 'AD',
     color: 'green',
     navigation: [
-  { id: 'advisorPortfolio', label: 'Client Portfolio', icon: 'users' },
-  { id: 'advisorAnalytics', label: 'Analytics', icon: 'chart' },
-  { id: 'advisorReports', label: 'Reports', icon: 'document' },
-  { id: 'advisorTools', label: 'Planning Tools', icon: 'tools' },
-  { id: 'advisorExploreCharts', label: 'Explore Charts', icon: 'chart' }
+      { id: 'advisorPortfolio', label: 'Client Portfolio', icon: 'users' },
+      { id: 'advisorAnalytics', label: 'Analytics', icon: 'chart' },
+      { id: 'advisorReports', label: 'Reports', icon: 'document' },
+      { id: 'advisorTools', label: 'Planning Tools', icon: 'tools' },
+      { id: 'advisorExploreCharts', label: 'Explore Charts', icon: 'chart' }
     ]
   },
   regulator: {
@@ -48,25 +48,34 @@ export default function Dashboard({ currentUser, username, onLogout }) {
 
   const config = userConfigs[currentUser];
 
+  // Set default tab on load
   useEffect(() => {
     if (config && config.navigation.length > 0) {
       setActiveTab(config.navigation[0].id);
     }
   }, [config]);
 
+  // Detect system/browser theme + listen for changes
+  useEffect(() => {
+    const darkModeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDark(darkModeMedia.matches);
+
+    const handleChange = (e) => setIsDark(e.matches);
+    darkModeMedia.addEventListener('change', handleChange);
+
+    return () => darkModeMedia.removeEventListener('change', handleChange);
+  }, []);
+
+  // Apply Tailwind dark mode class
   useEffect(() => {
     if (isDark) {
-      document.body.classList.add('dark');
-      document.body.style.backgroundColor = '#111827';
+      document.documentElement.classList.add('dark');
     } else {
-      document.body.classList.remove('dark');
-      document.body.style.backgroundColor = '';
+      document.documentElement.classList.remove('dark');
     }
   }, [isDark]);
 
-  const toggleTheme = () => {
-    setIsDark(prev => !prev);
-  };
+  const toggleTheme = () => setIsDark(prev => !prev);
 
   const renderContent = () => {
     switch (currentUser) {
@@ -82,75 +91,85 @@ export default function Dashboard({ currentUser, username, onLogout }) {
   };
 
   return (
-    <div className={isDark ? 'dark' : ''}>
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Top Navigation */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm">
-  <div className="flex items-center space-x-3">
-    <div className={`w-8 h-8 bg-${config.color}-600 rounded-lg flex items-center justify-center`}>
-      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
-      </svg>
-    </div>
-    <div>
-      <h1 className="text-xl font-semibold text-gray-900">Pension Insights</h1>
-      <p className="text-sm text-gray-500">{config.name}</p>
-    </div>
-  </div>
-  <div className="flex items-center space-x-4">
-    {/* Dark Mode Toggle */}
-   <button
-  onClick={toggleTheme}
-  className={`p-3 rounded-xl transition-all duration-300 ${
-    isDark 
-      ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
-      : 'bg-white text-gray-600 hover:bg-gray-50 shadow-lg'
-  }`}
->
-  {isDark ? (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-      />
-    </svg>
-  ) : (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-      />
-    </svg>
-  )}
-</button>
-
-
-        {/* Logout Button - dark mode compatible */}
-        <button onClick={onLogout} className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-300 ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'hover:bg-gray-100'} group`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? 'bg-gray-700' : `bg-${config.color}-100`}`}>
-            <span className={`font-medium text-sm ${isDark ? 'text-white' : `text-${config.color}-600`}`}>{config.initials}</span>
+      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center shadow-sm">
+        <div className="flex items-center space-x-3">
+          <div className={`w-8 h-8 bg-${config.color}-600 rounded-lg flex items-center justify-center`}>
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+            </svg>
           </div>
-          <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-700'}`}>{username}</span>
-          <svg className={`w-4 h-4 ${isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-500 group-hover:text-gray-700'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-          </svg>
-        </button>
-  </div>
-</nav>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Pension Insights</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-300">{config.name}</p>
+          </div>
+        </div>
 
-      <div className="flex h-screen">
-        {/* Left Sidebar */}
-        <Navigation 
-          config={config} 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab} 
+        <div className="flex items-center space-x-4">
+          {/* Dark Mode Toggle */}
+          <button
+            onClick={toggleTheme}
+            className={`p-3 rounded-xl transition-all duration-300 ${
+              isDark
+                ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 shadow-lg'
+            }`}
+          >
+            {isDark ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
+              </svg>
+            )}
+          </button>
+
+          {/* Logout Button */}
+          <button
+            onClick={onLogout}
+            className="flex items-center space-x-2 p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          >
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-${config.color}-100 dark:bg-gray-700`}>
+              <span className={`font-medium text-sm text-${config.color}-600 dark:text-white`}>
+                {config.initials}
+              </span>
+            </div>
+            <span className="text-sm font-medium text-gray-700 dark:text-white">{username}</span>
+            <svg
+              className="w-4 h-4 text-gray-500 group-hover:text-gray-700 dark:text-gray-300 dark:group-hover:text-white"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+          </button>
+        </div>
+      </nav>
+
+      {/* Body */}
+      <div className="flex flex-1">
+        {/* Sidebar */}
+        <Navigation
+          config={config}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto p-4">
           {renderContent()}
         </main>
       </div>
