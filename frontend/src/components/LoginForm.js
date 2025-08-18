@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 
 export default function LoginForm({ selectedRole, onLogin, onBack }) {
   const [username, setUsername] = useState('');
@@ -8,6 +9,7 @@ export default function LoginForm({ selectedRole, onLogin, onBack }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Demo credentials for each role
   const demoCredentials = {
@@ -42,16 +44,45 @@ export default function LoginForm({ selectedRole, onLogin, onBack }) {
 
   const config = roleConfig[selectedRole];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
-    const validCredentials = demoCredentials[selectedRole];
-    
-    if (username === validCredentials.username && password === validCredentials.password) {
-      onLogin(selectedRole, username);
-    } else {
-      setError('Invalid username or password. Please try again.');
+    try {
+      // Try NextAuth login first
+      const result = await signIn('credentials', {
+        redirect: false,
+        username,
+        password,
+        role: selectedRole,
+      });
+
+      if (result?.ok) {
+        // NextAuth login successful - session will be handled by parent component
+        // Don't call onLogin here, let useSession in parent handle it
+      } else if (result?.error) {
+        // NextAuth failed, try legacy validation as fallback
+        const validCredentials = demoCredentials[selectedRole];
+        
+        if (username === validCredentials.username && password === validCredentials.password) {
+          // Legacy login successful
+          onLogin(selectedRole, username);
+        } else {
+          setError('Invalid username or password. Please try again.');
+        }
+      }
+    } catch (error) {
+      // If NextAuth fails completely, try legacy validation
+      const validCredentials = demoCredentials[selectedRole];
+      
+      if (username === validCredentials.username && password === validCredentials.password) {
+        onLogin(selectedRole, username);
+      } else {
+        setError('Invalid username or password. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -158,9 +189,10 @@ export default function LoginForm({ selectedRole, onLogin, onBack }) {
 
           <button
             type="submit"
-            className={`w-full bg-${config.color}-600 text-white py-3 rounded-lg hover:bg-${config.color}-700 focus:ring-4 focus:ring-${config.color}-200 transition-all font-medium`}
+            disabled={isLoading}
+            className={`w-full bg-${config.color}-600 text-white py-3 rounded-lg hover:bg-${config.color}-700 focus:ring-4 focus:ring-${config.color}-200 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            Sign In
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
