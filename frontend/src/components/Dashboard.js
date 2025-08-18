@@ -65,7 +65,7 @@ const userConfigs = {
 
 
 // Mock Content Components
-export default function Dashboard({ currentUser = 'member', username = 'Demo User', onLogout = () => {} }) {
+export default function Dashboard({ currentUser = 'member', username = 'Demo User', onLogout = () => { } }) {
   const [activeTab, setActiveTab] = useState('');
   const [isDark, setIsDark] = useState(false);
   const [userToggled, setUserToggled] = useState(false);
@@ -148,11 +148,10 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
           {/* Dark Mode Toggle */}
           <button
             onClick={toggleTheme}
-            className={`p-3 rounded-xl transition-all duration-300 ${
-              isDark
-                ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 shadow-lg'
-            }`}
+            className={`p-3 rounded-xl transition-all duration-300 ${isDark
+              ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 shadow-lg'
+              }`}
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? (
@@ -179,16 +178,34 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
           {/* Logout Button */}
           <button
             onClick={onLogout}
-            className="flex items-center space-x-2 p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-300 group
+    ${isDark
+                ? "bg-gray-700 hover:bg-gray-600"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200 shadow-lg"
+              }`}
           >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${themeColors.bg100} dark:bg-gray-700`}>
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${themeColors.bg100} dark:bg-gray-700`}
+            >
               <span className={`font-medium text-sm ${themeColors.text600} dark:text-white`}>
                 {config.initials}
               </span>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-white">{username}</span>
+
+            {/* Username */}
+            <span
+              className={`px-6 py-3 text-left text-xs uppercase transition-colors duration-200
+      ${isDark
+                  ? "font-bold text-gray-200 group-hover:text-yellow-400"
+                  : "font-medium text-gray-500 group-hover:text-gray-700"
+                }`}
+            >
+              {username}
+            </span>
+
+            {/* Logout Icon */}
             <svg
-              className="w-4 h-4 text-gray-500 group-hover:text-gray-700 dark:text-gray-300 dark:group-hover:text-white"
+              className="w-4 h-4 text-gray-500 dark:text-gray-300 group-hover:text-gray-700 dark:group-hover:text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -201,6 +218,8 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
               />
             </svg>
           </button>
+
+
         </div>
       </nav>
 
