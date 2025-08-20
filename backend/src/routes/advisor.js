@@ -37,8 +37,9 @@ router.use(authenticate);
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Member user ID for portfolio optimization
+ *           type: string
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         description: Alphanumeric member user identifier
  *     responses:
  *       200:
  *         description: Portfolio optimization recommendations
@@ -54,7 +55,9 @@ router.use(authenticate);
  *                   type: object
  *                   properties:
  *                     userId:
- *                       type: integer
+ *                       type: string
+ *                       pattern: '^[a-zA-Z0-9]+$'
+ *                       description: Alphanumeric user identifier
  *                     currentAllocation:
  *                       type: object
  *                     optimizedAllocation:
@@ -77,7 +80,7 @@ router.use(authenticate);
 
 // Get portfolio optimization for a member
 router.get('/portfolio-optimization/:userId', [
-  param('userId').isInt().withMessage('User ID must be an integer')
+  param('userId').matches(/^[a-zA-Z0-9]+$/).withMessage('User ID must be alphanumeric')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -149,7 +152,9 @@ router.get('/portfolio-optimization/:userId', [
  *                     type: object
  *                     properties:
  *                       userId:
- *                         type: integer
+ *                         type: string
+ *                         pattern: '^[a-zA-Z0-9]+$'
+ *                         description: Alphanumeric user identifier
  *                       optimizedAllocation:
  *                         type: object
  *                       expectedReturn:
@@ -206,8 +211,9 @@ router.post('/portfolio-optimization/bulk', [
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Member user ID for rebalancing recommendations
+ *           type: string
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         description: Alphanumeric member user identifier
  *     responses:
  *       200:
  *         description: Portfolio rebalancing recommendations
@@ -223,7 +229,9 @@ router.post('/portfolio-optimization/bulk', [
  *                   type: object
  *                   properties:
  *                     userId:
- *                       type: integer
+ *                       type: string
+ *                       pattern: '^[a-zA-Z0-9]+$'
+ *                       description: Alphanumeric user identifier
  *                     currentAllocation:
  *                       type: object
  *                     targetAllocation:
@@ -251,7 +259,7 @@ router.post('/portfolio-optimization/bulk', [
 
 // Rebalance portfolio recommendations
 router.get('/portfolio-rebalancing/:userId', [
-  param('userId').isInt().withMessage('User ID must be an integer')
+  param('userId').matches(/^[a-zA-Z0-9]+$/).withMessage('User ID must be alphanumeric')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -427,7 +435,9 @@ router.post('/member-segmentation', [
  *                         type: object
  *                         properties:
  *                           userId:
- *                             type: integer
+ *                             type: string
+ *                             pattern: '^[a-zA-Z0-9]+$'
+ *                             description: Alphanumeric user identifier
  *                           name:
  *                             type: string
  *                           age:
@@ -498,8 +508,9 @@ router.get('/member-segmentation/:clusterId/members', [
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Member user ID for risk alerts
+ *           type: string
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         description: Alphanumeric member user identifier
  *     responses:
  *       200:
  *         description: Risk alerts for the member
@@ -515,7 +526,9 @@ router.get('/member-segmentation/:clusterId/members', [
  *                   type: object
  *                   properties:
  *                     userId:
- *                       type: integer
+ *                       type: string
+ *                       pattern: '^[a-zA-Z0-9]+$'
+ *                       description: Alphanumeric user identifier
  *                     alerts:
  *                       type: array
  *                       items:
@@ -549,7 +562,7 @@ router.get('/member-segmentation/:clusterId/members', [
 
 // Generate risk alerts for a member
 router.get('/risk-alerts/:userId', [
-  param('userId').isInt().withMessage('User ID must be an integer')
+  param('userId').matches(/^[a-zA-Z0-9]+$/).withMessage('User ID must be alphanumeric')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -615,7 +628,9 @@ router.get('/risk-alerts/:userId', [
  *                     type: object
  *                     properties:
  *                       userId:
- *                         type: integer
+ *                         type: string
+ *                         pattern: '^[a-zA-Z0-9]+$'
+ *                         description: Alphanumeric user identifier
  *                       alerts:
  *                         type: array
  *                       riskScore:
@@ -674,8 +689,9 @@ router.post('/risk-alerts/bulk', [
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Member user ID for contribution recommendations
+ *           type: string
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         description: Alphanumeric member user identifier
  *     responses:
  *       200:
  *         description: Contribution recommendations
@@ -691,7 +707,9 @@ router.post('/risk-alerts/bulk', [
  *                   type: object
  *                   properties:
  *                     userId:
- *                       type: integer
+ *                       type: string
+ *                       pattern: '^[a-zA-Z0-9]+$'
+ *                       description: Alphanumeric user identifier
  *                     recommendations:
  *                       type: array
  *                       items:
@@ -719,7 +737,7 @@ router.post('/risk-alerts/bulk', [
 
 // Generate contribution recommendations for a member
 router.get('/contribution-recommendations/:userId', [
-  param('userId').isInt().withMessage('User ID must be an integer')
+  param('userId').matches(/^[a-zA-Z0-9]+$/).withMessage('User ID must be alphanumeric')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -748,7 +766,7 @@ router.get('/contribution-recommendations/:userId', [
  * /api/advisor/contribution-recommendations/{userId}/what-if:
  *   post:
  *     summary: Calculate what-if scenarios for contributions
- *     description: Simulate different contribution scenarios to project future retirement outcomes
+ *     description: Simulate different contribution scenarios to project future retirement outcomes with target achievement analysis
  *     tags: [Advisor]
  *     security:
  *       - BearerAuth: []
@@ -757,8 +775,10 @@ router.get('/contribution-recommendations/:userId', [
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Member user ID for what-if analysis
+ *           type: string
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         description: Member user ID for what-if analysis (alphanumeric)
+ *         example: "U1001"
  *     requestBody:
  *       required: true
  *       content:
@@ -771,18 +791,27 @@ router.get('/contribution-recommendations/:userId', [
  *                 items:
  *                   type: object
  *                   properties:
- *                     contributionType:
+ *                     name:
  *                       type: string
- *                     newAmount:
+ *                       description: Name for this scenario
+ *                       example: "Aggressive Savings"
+ *                     newAnnualContribution:
  *                       type: number
- *                     frequency:
- *                       type: string
- *                     startDate:
- *                       type: string
- *                       format: date
+ *                       description: New annual contribution amount
+ *                       example: 10000
+ *                     retirementAgeChange:
+ *                       type: integer
+ *                       description: Change in retirement age (+ or -)
+ *                       example: -2
+ *             example:
+ *               contributionChanges:
+ *                 - name: "Aggressive Savings"
+ *                   newAnnualContribution: 10000
+ *                 - name: "Early Retirement"
+ *                   retirementAgeChange: -2
  *     responses:
  *       200:
- *         description: What-if scenario results
+ *         description: What-if scenario results with target achievement analysis
  *         content:
  *           application/json:
  *             schema:
@@ -794,19 +823,66 @@ router.get('/contribution-recommendations/:userId', [
  *                 data:
  *                   type: object
  *                   properties:
- *                     scenarios:
+ *                     userId:
+ *                       type: string
+ *                       example: "U1001"
+ *                     baselineScenario:
+ *                       type: object
+ *                       properties:
+ *                         name:
+ *                           type: string
+ *                           example: "Status Quo"
+ *                         projectedValue:
+ *                           type: number
+ *                           example: 1111824
+ *                         targetAchievement:
+ *                           type: object
+ *                           properties:
+ *                             targetAmount:
+ *                               type: number
+ *                               example: 177640
+ *                             targetAmountAchievement:
+ *                               type: integer
+ *                               example: 626
+ *                             status:
+ *                               type: string
+ *                               example: "Exceeds Target"
+ *                             gapAnalysis:
+ *                               type: object
+ *                               properties:
+ *                                 amountGap:
+ *                                   type: number
+ *                                   example: 0
+ *                                 payoutGap:
+ *                                   type: number
+ *                                   example: 5346
+ *                     whatIfScenarios:
  *                       type: array
  *                       items:
  *                         type: object
  *                         properties:
- *                           scenarioName:
+ *                           name:
  *                             type: string
- *                           projectedBalance:
- *                             type: number
- *                           monthlyIncome:
- *                             type: number
- *                           yearsToRetirement:
- *                             type: integer
+ *                             example: "Aggressive Savings"
+ *                           results:
+ *                             type: object
+ *                             properties:
+ *                               projectedValue:
+ *                                 type: number
+ *                                 example: 1344606
+ *                               targetAchievement:
+ *                                 type: object
+ *                                 properties:
+ *                                   targetAmountAchievement:
+ *                                     type: integer
+ *                                     example: 757
+ *                                   status:
+ *                                     type: string
+ *                                     example: "Exceeds Target"
+ *                     generatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-08-20T12:31:09.354Z"
  *       400:
  *         $ref: '#/components/responses/ValidationError'
  *       401:
@@ -817,7 +893,7 @@ router.get('/contribution-recommendations/:userId', [
 
 // Calculate what-if scenarios for contributions
 router.post('/contribution-recommendations/:userId/what-if', [
-  param('userId').isInt().withMessage('User ID must be an integer'),
+  param('userId').matches(/^[a-zA-Z0-9]+$/).withMessage('User ID must be alphanumeric'),
   body('contributionChanges').isArray().withMessage('Contribution changes must be an array')
 ], async (req, res) => {
   try {
@@ -887,7 +963,9 @@ router.post('/contribution-recommendations/:userId/what-if', [
  *                     type: object
  *                     properties:
  *                       userId:
- *                         type: integer
+ *                         type: string
+ *                         pattern: '^[a-zA-Z0-9]+$'
+ *                         description: Alphanumeric user identifier
  *                       recommendations:
  *                         type: array
  *                       projectedBenefits:
@@ -944,8 +1022,9 @@ router.post('/contribution-recommendations/bulk', [
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Member user ID for simulation
+ *           type: string
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         description: Alphanumeric member user identifier
  *     requestBody:
  *       required: false
  *       content:
@@ -982,7 +1061,9 @@ router.post('/contribution-recommendations/bulk', [
  *                   type: object
  *                   properties:
  *                     userId:
- *                       type: integer
+ *                       type: string
+ *                       pattern: '^[a-zA-Z0-9]+$'
+ *                       description: Alphanumeric user identifier
  *                     simulationResults:
  *                       type: object
  *                     scenarios:
@@ -999,7 +1080,7 @@ router.post('/contribution-recommendations/bulk', [
 
 // Run comprehensive what-if simulation
 router.post('/what-if-simulation/:userId', [
-  param('userId').isInt().withMessage('User ID must be an integer'),
+  param('userId').matches(/^[a-zA-Z0-9]+$/).withMessage('User ID must be alphanumeric'),
   body('scenarioParameters').optional().isObject().withMessage('Scenario parameters must be an object')
 ], async (req, res) => {
   try {
@@ -1040,8 +1121,9 @@ router.post('/what-if-simulation/:userId', [
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Member user ID for Monte Carlo simulation
+ *           type: string
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         description: Alphanumeric member user identifier
  *     requestBody:
  *       required: false
  *       content:
@@ -1073,7 +1155,9 @@ router.post('/what-if-simulation/:userId', [
  *                   type: object
  *                   properties:
  *                     userId:
- *                       type: integer
+ *                       type: string
+ *                       pattern: '^[a-zA-Z0-9]+$'
+ *                       description: Alphanumeric user identifier
  *                     simulationCount:
  *                       type: integer
  *                     results:
@@ -1099,7 +1183,7 @@ router.post('/what-if-simulation/:userId', [
 
 // Run Monte Carlo simulation
 router.post('/monte-carlo-simulation/:userId', [
-  param('userId').isInt().withMessage('User ID must be an integer'),
+  param('userId').matches(/^[a-zA-Z0-9]+$/).withMessage('User ID must be alphanumeric'),
   body('simulations').optional().isInt({ min: 100, max: 10000 }).withMessage('Simulations must be between 100 and 10000')
 ], async (req, res) => {
   try {
@@ -1144,8 +1228,9 @@ router.post('/monte-carlo-simulation/:userId', [
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Member user ID for dashboard data
+ *           type: string
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         description: Alphanumeric member user identifier
  *     responses:
  *       200:
  *         description: Complete advisor dashboard data
@@ -1161,7 +1246,9 @@ router.post('/monte-carlo-simulation/:userId', [
  *                   type: object
  *                   properties:
  *                     userId:
- *                       type: integer
+ *                       type: string
+ *                       pattern: '^[a-zA-Z0-9]+$'
+ *                       description: Alphanumeric user identifier
  *                     portfolioOptimization:
  *                       type: object
  *                       description: Portfolio optimization recommendations
@@ -1193,7 +1280,7 @@ router.post('/monte-carlo-simulation/:userId', [
 
 // Get all advisor dashboard data for a member
 router.get('/dashboard/:userId', [
-  param('userId').isInt().withMessage('User ID must be an integer')
+  param('userId').matches(/^[a-zA-Z0-9]+$/).withMessage('User ID must be alphanumeric')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);

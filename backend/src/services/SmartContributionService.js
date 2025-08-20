@@ -385,14 +385,15 @@ class SmartContributionService {
       // Fetch member data from database
       const query = `
         SELECT user_id, age, annual_income, current_savings, risk_tolerance, 
-               expected_retirement_age, equity_allocation, bond_allocation, 
-               yearly_contributions, employer_match_rate, pension_type,
-               current_employer, years_to_retirement, target_retirement_income
+               retirement_age_goal, contribution_amount, employer_contribution, 
+               total_annual_contribution, pension_type, annual_return_rate,
+               volatility, projected_pension_amount, expected_annual_payout,
+               inflation_adjusted_payout, years_of_payout
         FROM pension_data 
         WHERE user_id = $1
       `;
       
-      const result = await db.query(query, [userId]);
+      const result = await DatabaseConnection.query(query, [userId]);
       if (result.rows.length === 0) {
         throw new Error('Member data not found');
       }
@@ -406,23 +407,33 @@ class SmartContributionService {
         
         // Apply changes
         if (change.newAnnualContribution !== undefined) {
-          modifiedData.yearly_contributions = change.newAnnualContribution;
+          modifiedData.total_annual_contribution = change.newAnnualContribution;
         }
         if (change.retirementAgeChange !== undefined) {
-          modifiedData.expected_retirement_age = memberData.expected_retirement_age + change.retirementAgeChange;
+          modifiedData.retirement_age_goal = memberData.retirement_age_goal + change.retirementAgeChange;
         }
 
         const scenario = this.generateScenarios(modifiedData)[0]; // Get the first scenario
+        
+        // Calculate target achievement
+        const targetAchievement = this.calculateTargetAchievement(scenario, memberData);
+        
         scenarios.push({
           name: change.name || 'What-If Scenario',
           changes: change,
-          results: scenario
+          results: {
+            ...scenario,
+            targetAchievement
+          }
         });
       }
 
       return {
         userId,
-        baselineScenario: this.generateScenarios(memberData)[0],
+        baselineScenario: {
+          ...this.generateScenarios(memberData)[0],
+          targetAchievement: this.calculateTargetAchievement(this.generateScenarios(memberData)[0], memberData)
+        },
         whatIfScenarios: scenarios,
         generatedAt: new Date().toISOString()
       };
@@ -431,6 +442,47 @@ class SmartContributionService {
       console.error('What-if calculation error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Calculate how well a scenario meets retirement targets
+   */
+  static calculateTargetAchievement(scenario, memberData) {
+    const targetAmount = memberData.projected_pension_amount || 0;
+    const targetPayout = memberData.expected_annual_payout || 0;
+    const inflationAdjustedPayout = memberData.inflation_adjusted_payout || 0;
+    const payoutYears = memberData.years_of_payout || 25;
+    
+    const projectedValue = scenario.projectedValue || 0;
+    const sustainableWithdrawal = projectedValue * 0.04; // 4% rule
+    
+    // Calculate achievement percentages
+    const targetAmountAchievement = targetAmount > 0 ? (projectedValue / targetAmount) * 100 : 100;
+    const payoutAchievement = targetPayout > 0 ? (sustainableWithdrawal / targetPayout) * 100 : 100;
+    const inflationAdjustedAchievement = inflationAdjustedPayout > 0 ? (sustainableWithdrawal / inflationAdjustedPayout) * 100 : 100;
+    
+    // Determine status
+    let status = 'On Track';
+    if (targetAmountAchievement < 80) status = 'Behind Target';
+    if (targetAmountAchievement > 120) status = 'Exceeds Target';
+    
+    return {
+      targetAmount,
+      projectedValue,
+      targetAmountAchievement: Math.round(targetAmountAchievement),
+      targetPayout,
+      sustainableWithdrawal: Math.round(sustainableWithdrawal),
+      payoutAchievement: Math.round(payoutAchievement),
+      inflationAdjustedPayout,
+      inflationAdjustedAchievement: Math.round(inflationAdjustedAchievement),
+      payoutYears,
+      status,
+      gapAnalysis: {
+        amountGap: Math.max(0, targetAmount - projectedValue),
+        payoutGap: Math.max(0, targetPayout - sustainableWithdrawal),
+        inflationGap: Math.max(0, inflationAdjustedPayout - sustainableWithdrawal)
+      }
+    };
   }
 
   /**

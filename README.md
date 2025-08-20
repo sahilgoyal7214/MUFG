@@ -8,16 +8,24 @@ A comprehensive backend API for pension data analysis, insights, and AI-powered 
 ✅ **Swagger/OpenAPI Documentation** at `/api-docs`  
 ✅ **Local LLM Integration** for AI-powered chatbot  
 ✅ **JWT Authentication** with test tokens  
-✅ **Financial Calculation Engine** with your custom functions  
+✅ **Financial Calculation Engine** with custom functions  
 ✅ **Audit Logging System** for compliance  
-✅ **Comprehensive Testing Tools** for API validation
+✅ **Comprehensive Testing Tools** for API validation  
+✅ **Organized Project Structure** with proper separation of concerns
 
 ## 🏗️ Project Structure
 
 ```
-mufg-pension-insights/
-├── backend/                           # Express.js Backend API
-│   ├── src/
+mufg/
+├── backend/                    # Node.js/Express backend server
+│   ├── src/                   # Source code
+│   ├── database/              # SQLite database and migrations
+│   ├── tests/                 # Test suites (unit, integration, scripts)
+│   ├── reference/             # Reference materials and Python logic
+│   └── tools/                 # Development tools
+├── documentation/             # Centralized documentation
+├── testing/                   # Testing materials and TestSprite results
+└── scripts/                   # Project maintenance scripts
 │   │   ├── routes/                    # API Routes
 │   │   │   ├── auth.js               # Authentication & JWT verification
 │   │   │   ├── users.js              # User management (role-based)
