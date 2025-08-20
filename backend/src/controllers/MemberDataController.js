@@ -3,7 +3,7 @@
  * Handles member pension data operations with role-based access control
  */
 
-import { MemberData } from '../models/MemberData.js';
+import PensionData from '../models/PensionData.js';
 import { hasPermission } from '../config/roles.js';
 import { AuditService } from '../services/AuditService.js';
 
@@ -26,7 +26,7 @@ export class MemberDataController {
         });
       }
 
-      const memberData = await MemberData.findByMemberId(memberId);
+      const memberData = await PensionData.findByUserId(memberId);
       
       if (!memberData) {
         return res.status(404).json({
@@ -80,7 +80,21 @@ export class MemberDataController {
         });
       }
 
-      const updatedData = await MemberData.update(memberId, updateData);
+      // Find existing data
+      const existingData = await PensionData.findByUserId(memberId);
+      
+      if (!existingData) {
+        return res.status(404).json({
+          error: {
+            message: 'Member data not found',
+            status: 404
+          }
+        });
+      }
+
+      // Update the data
+      Object.assign(existingData, updateData);
+      const updatedData = await existingData.save();
       
       // Log data modification for audit
       await AuditService.logDataAccess({

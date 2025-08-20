@@ -22,7 +22,7 @@
  */
 
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticateTest as authenticate } from '../middleware/auth-test.js';
 
 const router = express.Router();
 

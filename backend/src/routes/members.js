@@ -10,7 +10,7 @@
 
 import express from 'express';
 import { MemberDataController } from '../controllers/MemberDataController.js';
-import { authenticate, authorize, memberDataAccess } from '../middleware/auth.js';
+import { authenticateTest as authenticate, authorize, memberDataAccess } from '../middleware/auth-test.js';
 import { PERMISSIONS } from '../config/roles.js';
 
 const router = express.Router();

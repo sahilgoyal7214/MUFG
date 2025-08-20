@@ -9,7 +9,7 @@
  */
 
 import express from 'express';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticateTest as authenticate, authorize } from '../middleware/auth-test.js';
 import { PERMISSIONS } from '../config/roles.js';
 import KpiService from '../services/KpiService.js';
 
@@ -104,7 +104,7 @@ router.use(authenticate);
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/retirement-age',
-  authorize(PERMISSIONS.VIEW_MEMBER_DATA),
+  authorize([PERMISSIONS.MEMBER_DATA_READ_ALL]),
   async (req, res) => {
     try {
       const { currentAge, targetCorpus, annualInvestment, annualReturn, currentCorpus = 0 } = req.body;

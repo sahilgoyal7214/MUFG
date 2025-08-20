@@ -19,10 +19,14 @@ export const PERMISSIONS = {
   MEMBER_DATA_READ_ALL: 'member_data:read:all',        // All member data
   MEMBER_DATA_READ_OWN: 'member_data:read:own',        // Own data only
   MEMBER_DATA_READ_ASSIGNED: 'member_data:read:assigned', // Assigned clients
+  MEMBER_DATA_CREATE: 'member_data:create',            // Create new records
+  MEMBER_DATA_UPDATE: 'member_data:update',            // Update any data
   MEMBER_DATA_UPDATE_OWN: 'member_data:update:own',    // Update own data
   MEMBER_DATA_UPDATE_ASSIGNED: 'member_data:update:assigned', // Update client data
+  MEMBER_DATA_DELETE: 'member_data:delete',            // Delete records
   
   // Analytics & Reports
+  ANALYTICS_READ: 'analytics:read',                     // Read analytics
   ANALYTICS_VIEW_ALL: 'analytics:view:all',            // System-wide analytics
   ANALYTICS_VIEW_OWN: 'analytics:view:own',            // Personal analytics
   ANALYTICS_VIEW_ASSIGNED: 'analytics:view:assigned',  // Client analytics
@@ -35,9 +39,15 @@ export const PERMISSIONS = {
   AI_INSIGHTS_CLIENT: 'ai:insights:client',            // Client insights
   
   // User Management
+  USER_READ: 'user:read',                              // Basic user read
   USER_READ_ALL: 'user:read:all',                      // View all users
   USER_READ_ASSIGNED: 'user:read:assigned',            // View assigned clients
+  USER_UPDATE: 'user:update',                          // Update users
+  USER_UPDATE_ALL: 'user:update:all',                  // Update any user
   USER_UPDATE_ASSIGNED: 'user:update:assigned',        // Update client profiles
+  
+  // Reports & Export
+  REPORTS_GENERATE: 'reports:generate',                 // Generate reports
   
   // Regulatory & Compliance
   REGULATORY_OVERSIGHT: 'regulatory:oversight',         // Full regulatory access
@@ -49,10 +59,18 @@ export const ROLE_PERMISSIONS = {
   [ROLES.REGULATOR]: [
     // Regulators have full oversight access
     PERMISSIONS.MEMBER_DATA_READ_ALL,
+    PERMISSIONS.MEMBER_DATA_CREATE,
+    PERMISSIONS.MEMBER_DATA_UPDATE,
+    PERMISSIONS.MEMBER_DATA_DELETE,
+    PERMISSIONS.ANALYTICS_READ,
     PERMISSIONS.ANALYTICS_VIEW_ALL,
     PERMISSIONS.ANALYTICS_EXPORT,
     PERMISSIONS.COMPLIANCE_REPORTS,
+    PERMISSIONS.USER_READ,
     PERMISSIONS.USER_READ_ALL,
+    PERMISSIONS.USER_UPDATE,
+    PERMISSIONS.USER_UPDATE_ALL,
+    PERMISSIONS.REPORTS_GENERATE,
     PERMISSIONS.REGULATORY_OVERSIGHT,
     PERMISSIONS.AUDIT_LOGS,
     PERMISSIONS.COMPLIANCE_MONITORING
@@ -67,8 +85,10 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.ANALYTICS_EXPORT,
     PERMISSIONS.CHATBOT_ACCESS,
     PERMISSIONS.AI_INSIGHTS_CLIENT,
+    PERMISSIONS.USER_READ,
     PERMISSIONS.USER_READ_ASSIGNED,
-    PERMISSIONS.USER_UPDATE_ASSIGNED
+    PERMISSIONS.USER_UPDATE_ASSIGNED,
+    PERMISSIONS.REPORTS_GENERATE
   ],
   
   [ROLES.MEMBER]: [
@@ -77,7 +97,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.MEMBER_DATA_UPDATE_OWN,
     PERMISSIONS.ANALYTICS_VIEW_OWN,
     PERMISSIONS.CHATBOT_ACCESS,
-    PERMISSIONS.AI_INSIGHTS_PERSONAL
+    PERMISSIONS.AI_INSIGHTS_PERSONAL,
+    PERMISSIONS.USER_READ // Members can read their own profile
   ]
 };
 

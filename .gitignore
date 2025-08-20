@@ -191,5 +191,3 @@ docker-compose.override.yml
 
 # Custom files
 model_training
-*.md
-**/*.md

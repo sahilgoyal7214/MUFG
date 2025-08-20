@@ -20,7 +20,16 @@ const testUsers = {
     email: 'regulator@mufg.com',
     role: 'REGULATOR',
     name: 'John Regulator',
-    permissions: ['USER_READ_ALL', 'ANALYTICS_VIEW_ALL', 'AUDIT_LOGS', 'MEMBER_DATA_READ_ALL']
+    permissions: [
+      'USER_READ_ALL', 
+      'ANALYTICS_READ',
+      'ANALYTICS_VIEW_ALL', 
+      'AUDIT_LOGS', 
+      'MEMBER_DATA_READ_ALL',
+      'MEMBER_DATA_CREATE',
+      'MEMBER_DATA_UPDATE', 
+      'MEMBER_DATA_DELETE'
+    ]
   },
   advisor: {
     id: 'ADV001', 

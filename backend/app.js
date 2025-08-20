@@ -1,3 +1,4 @@
+console.log('🔍 Testing logging - request received');
 /**
  * MUFG Pension Insights Backend API
  * Professional ExpressJS application with role-based access control
@@ -16,10 +17,12 @@ import { dirname, join } from 'path';
 import authRoutes from './src/routes/auth.js';
 import userRoutes from './src/routes/users.js';
 import memberRoutes from './src/routes/members.js';
+import pensionDataRoutes from './src/routes/pensionData.js';
 import chatbotRoutes from './src/routes/chatbot.js';
 import analyticsRoutes from './src/routes/analytics.js';
 import logsRoutes from './src/routes/logs.js';
 import kpiRoutes from './src/routes/kpi.js';
+import advisorRoutes from './src/routes/advisor.js';
 
 // Import services
 import { AuditService } from './src/services/AuditService.js';
@@ -70,6 +73,7 @@ if (process.env.NODE_ENV !== 'test') {
 app.use((req, res, next) => {
   req.requestId = Date.now().toString(36) + Math.random().toString(36).substr(2);
   req.startTime = Date.now();
+  console.log(`🔍 Request: ${req.method} ${req.originalUrl} - ID: ${req.requestId}`);
   next();
 });
 
@@ -92,8 +96,10 @@ app.get('/api', (req, res) => {
       auth: '/api/auth',
       users: '/api/users',
       members: '/api/members',
+      pensionData: '/api/pension-data',
       chatbot: '/api/chatbot',
       analytics: '/api/analytics',
+      advisor: '/api/advisor',
       logs: '/api/logs',
       kpi: '/api/kpi'
     },
@@ -121,19 +127,11 @@ app.get('/api-docs.json', (req, res) => {
   res.send(specs);
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/members', memberRoutes);
-app.use('/api/chatbot', chatbotRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/logs', logsRoutes);
-app.use('/api/kpi', kpiRoutes);
-
-// Request completion logging
+// Request completion logging middleware - MUST be before routes
 app.use((req, res, next) => {
   res.on('finish', () => {
     const duration = Date.now() - req.startTime;
+    console.log(`✅ Response: ${req.method} ${req.originalUrl} - Status: ${res.statusCode} - Duration: ${duration}ms`);
     AuditService.logSystemEvent({
       event: 'API_REQUEST',
       description: `${req.method} ${req.originalUrl}`,
@@ -149,6 +147,17 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/members', memberRoutes);
+app.use('/api/pension-data', pensionDataRoutes);
+app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/advisor', advisorRoutes);
+app.use('/api/logs', logsRoutes);
+app.use('/api/kpi', kpiRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

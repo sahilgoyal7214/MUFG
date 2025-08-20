@@ -14,9 +14,9 @@
 import jwt from 'jsonwebtoken';
 
 export const nextAuthConfig = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET,
   jwt: {
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   session: {
