@@ -5,42 +5,37 @@ import dynamic from 'next/dynamic';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
-export default function MemberContent({ activeTab, isDark, onToggleDark,currentUserId }) {
+export default function MemberContent({ activeTab, isDark, onToggleDark }) {
   // State for loaded data
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-const [chartConfig, setChartConfig] = useState({
-  xAxis: "ProjectionTimeline",   // special-case branch in getChartData
-  yAxis: "Savings",              // maps to timeline savings values
-  chartType: "line",              // line chart shows growth well
-  colorScheme: "default",
-  showInsights: true
-});
-
-;
-
+  // State for chart configuration
+  const [chartConfig, setChartConfig] = useState({
+    xAxis: 'Age',
+    yAxis: 'Projected_Pension_Amount',
+    chartType: 'scatter'
+  });
 
   // State for managing multiple charts in the grid
   const [gridCharts, setGridCharts] = useState([
-  { 
-    id: 1,
-    xAxis: "ProjectionTimeline",  // 👈 use timeline
-    yAxis: "Savings",             // 👈 so it doesn’t collapse to 1 point
-    chartType: "line",
-    isConfigured: true,
-    colorScheme: "default",
-    showInsights: true,
-    customColors: {
-      primary: "#3b82f6",
-      secondary: "#8b5cf6",
-      accent: "#06d6a0"
-    }
-  },
-  { id: 2, isConfigured: false }
-]);
-
+    { // Default chart in first position
+      id: 1,
+      xAxis: 'Age',
+      yAxis: 'Projected_Pension_Amount',
+      chartType: 'scatter',
+      isConfigured: true,
+      colorScheme: 'default',
+      showInsights: true,
+      customColors: {
+        primary: '#3b82f6',
+        secondary: '#8b5cf6',
+        accent: '#06d6a0'
+      }
+    },
+    { id: 2, isConfigured: false }
+  ]);
 
   // State for chart configuration modal
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -60,17 +55,6 @@ const [chartConfig, setChartConfig] = useState({
       accent: '#06d6a0'
     }
   });
-  // Curated axis options grouped by category
-const axisOptions = {
-  Demographics: ["Age", "Account_Age", "Years_Contributed"],
-  Financials: ["Current_Savings", "Annual_Income", "Debt_Level", "Monthly_Expenses"],
-  Contributions: ["Contribution_Amount", "Employer_Contribution", "Total_Annual_Contribution"],
-  Retirement: ["Projected_Pension_Amount", "Expected_Annual_Payout", "Inflation_Adjusted_Payout", "Years_of_Payout"],
-  Portfolio: ["Annual_Return_Rate", "Volatility", "Fees_Percentage", "Portfolio_Diversity_Score"],
-  Risk: ["Anomaly_Score", "Transaction_Pattern_Score"],
-  
-};
-
 
   // State for dropdown menus
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -115,53 +99,44 @@ const axisOptions = {
     Transaction_Date: 'Transaction Date',
     Government_Pension_Eligibility: 'Government Pension Eligibility',
     Account_Age: 'Account Age (years)',
-    Retirement_Readiness_Score: "Retirement Readiness Score",
-    Retirement_Coverage_Years: "Retirement Coverage Years",
-    Emergency_Fund_Months: "Emergency Fund (Months)",
-    Projected_NetWorth: "Projected Net Worth",
+    ProjectionTimeline: "Savings Projection (Timeline)",
+    DebtVsSavings: "Debt vs Savings",
+    ScenarioProjections: "What-if Scenarios"
   };
 
   // Load data from JSON file
- useEffect(() => {
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/data/dataset_augmented.json');
-      
-      if (!response.ok) {
-        throw new Error(`Failed to load data: ${response.status} ${response.statusText}`);
+  useEffect(() => {
+    const loadData = async () => {
+      try { 
+        setLoading(true);
+        const response = await fetch('/data/dataset.json');
+        if (!response.ok) {
+          throw new Error(`Failed to load data: ${response.status} ${response.statusText}`);
+        }
+        const jsonData = await response.json();
+        
+        // Validate that data is an array
+        if (!Array.isArray(jsonData)) {
+          throw new Error('Data must be an array of objects');
+        }
+        
+        // Validate that we have data
+        if (jsonData.length === 0) {
+          throw new Error('No data found in the JSON file');
+        }
+        
+        setData(jsonData);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      const jsonData = await response.json();
+    };
 
-      if (!Array.isArray(jsonData)) {
-        throw new Error('Data must be an array of objects');
-      }
-
-      // ✅ filter by currentUserId if passed
-      let filteredData = jsonData;
-      if (currentUserId) {
-        filteredData = jsonData.filter(row => row.User_ID === currentUserId);
-      }
-
-      if (filteredData.length === 0) {
-        throw new Error(currentUserId ? `No data found for user ${currentUserId}` : 'No data found in dataset');
-      }
-      console.log(`Loaded data for user ${currentUserId}:`, filteredData);
-      setData(filteredData);
-      setError(null);
-    } catch (err) {
-      console.error('Error loading data:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  loadData();
-}, [currentUserId]);
-
-
-
+    loadData();
+  }, []);
 
   // Get available numeric columns for charting
   const getNumericColumns = () => {
@@ -250,149 +225,61 @@ const axisOptions = {
 
   // Function to get chart data based on configuration
   const getChartData = (config) => {
-  if (data.length === 0) return [];
+    if (data.length === 0) return [];
 
-  const colors = colorSchemes[config.colorScheme]?.colors || colorSchemes.default.colors;
-
-  // ✅ Special handling for nested structures
-  if (config.xAxis === "ProjectionTimeline") {
-    const timeline = data[0]?.ProjectionTimeline || [];
-    return [{
-      x: timeline.map(d => d.Age),   // or d.Year
-      y: timeline.map(d => d.Savings),
-      type: "scatter",
-      mode: "lines+markers",
-      line: { color: colors[0], width: 3 },
-      marker: { size: 6, color: colors[0] },
-      name: "Savings Projection"
-    }];
-  }
-
-if (config.xAxis === "DebtVsSavings") {
-  const trajectory = data[0]?.DebtVsSavings || [];
-
-  // ✅ Case 1: Standard 2-line comparison over time
-  if (!config.yAxis || config.yAxis === "DebtVsSavings") {
-    return [
-      {
-        x: trajectory.map(d => d.Year),
-        y: trajectory.map(d => d.Savings),
-        type: "scatter",
-        mode: "lines+markers",
-        line: { color: colors[0], width: 3 },
-        marker: { size: 6, color: colors[0] },
-        name: "Savings"
-      },
-      {
-        x: trajectory.map(d => d.Year),
-        y: trajectory.map(d => d.Debt),
-        type: "scatter",
-        mode: "lines+markers",
-        line: { color: colors[1] || "red", width: 3 },
-        marker: { size: 6, color: colors[1] || "red" },
-        name: "Debt"
-      }
-    ];
-  }
-
-  // ✅ Case 2: One series only
-  if (["Savings", "Debt"].includes(config.yAxis)) {
-    return [{
-      x: trajectory.map(d => d.Year),
-      y: trajectory.map(d => d[config.yAxis]),
-      type: "scatter",
-      mode: "lines+markers",
-      line: { color: colors[0], width: 3 },
-      marker: { size: 6, color: colors[0] },
-      name: config.yAxis
-    }];
-  }
-
-  // ✅ Case 3: Compare nested series with a flat field (e.g., Years Contributed)
-  if (config.yAxis && data[0][config.yAxis] !== undefined) {
-    return [
-      {
-        x: trajectory.map(d => d.Year),
-        y: trajectory.map(() => data[0][config.yAxis]), // flat value repeated
-        type: "scatter",
-        mode: "lines",
-        line: { dash: "dot", color: colors[2] || "green", width: 2 },
-        name: variableNames[config.yAxis] || config.yAxis
-      }
-    ];
-  }
-
-  // ❌ Otherwise invalid
-  return [];
-}
-
-
-  if (config.xAxis === "ScenarioProjections") {
-    const scenarios = data[0]?.ScenarioProjections || {};
-    return [{
-      x: Object.keys(scenarios),
-      y: Object.values(scenarios),
-      type: "bar",
-      marker: { color: colors[0], opacity: 0.8 },
-      name: "Scenario Outcomes"
-    }];
-  }
-
-  // ✅ Fallback to existing flat-field handling
-  const xData = getColumnData(config.xAxis);
-  const yData = getColumnData(config.yAxis);
-
-  if (config.chartType === 'scatter') {
-    return [{
-      x: xData,
-      y: yData,
-      type: 'scatter',
-      mode: 'markers',
-      marker: { 
-        color: colors[0],
-        size: 10,
-        line: { color: isDark ? '#374151' : 'white', width: 2 },
-        opacity: 0.8
-      },
-      name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
-    }];
-  } else if (config.chartType === 'bar') {
-    return [{
-      x: xData,
-      y: yData,
-      type: 'bar',
-      marker: { 
-        color: colors[0],
-        opacity: 0.8,
-        line: { color: isDark ? '#374151' : 'white', width: 1 }
-      },
-      name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
-    }];
-  } else if (config.chartType === 'line') {
-    // Sort data by x-axis for line charts
-    const sortedData = xData.map((x, i) => ({ x, y: yData[i] }))
-      .sort((a, b) => a.x - b.x);
+    const xData = getColumnData(config.xAxis);
+    const yData = getColumnData(config.yAxis);
+    const colors = colorSchemes[config.colorScheme]?.colors || colorSchemes.default.colors;
     
-    return [{
-      x: sortedData.map(d => d.x),
-      y: sortedData.map(d => d.y),
-      type: 'scatter',
-      mode: 'lines+markers',
-      line: { color: colors[0], width: 3 },
-      marker: { size: 8, color: colors[0] },
-      name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
-    }];
-  } else if (config.chartType === 'histogram') {
-    return [{
-      x: yData,
-      type: 'histogram',
-      marker: { color: colors[0], opacity: 0.8 },
-      name: `Distribution of ${variableNames[config.yAxis]}`
-    }];
-  }
-
-  return [];
-};
+    if (config.chartType === 'scatter') {
+      return [{
+        x: xData,
+        y: yData,
+        type: 'scatter',
+        mode: 'markers',
+        marker: { 
+          color: colors[0],
+          size: 10,
+          line: { color: isDark ? '#374151' : 'white', width: 2 },
+          opacity: 0.8
+        },
+        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+      }];
+    } else if (config.chartType === 'bar') {
+      return [{
+        x: xData,
+        y: yData,
+        type: 'bar',
+        marker: { 
+          color: colors[0],
+          opacity: 0.8,
+          line: { color: isDark ? '#374151' : 'white', width: 1 }
+        },
+        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+      }];
+    } else if (config.chartType === 'line') {
+      // Sort data by x-axis for line charts
+      const sortedData = xData.map((x, i) => ({ x, y: yData[i] }))
+        .sort((a, b) => a.x - b.x);
+      
+      return [{
+        x: sortedData.map(d => d.x),
+        y: sortedData.map(d => d.y),
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { color: colors[0], width: 3 },
+        marker: { size: 8, color: colors[0] },
+        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+      }];
+    } else if (config.chartType === 'histogram') {
+      return [{
+        x: yData,
+        type: 'histogram',
+        marker: { color: colors[0], opacity: 0.8 },
+        name: `Distribution of ${variableNames[config.yAxis]}`
+      }];
+    }
+  };
 
   // Handle opening config modal for new chart
   const handleAddChart = (chartId) => {
@@ -990,16 +877,11 @@ if (config.xAxis === "DebtVsSavings") {
                         value={tempConfig.xAxis}
                         onChange={(e) => setTempConfig({...tempConfig, xAxis: e.target.value})}
                       >
-                        {Object.entries(axisOptions).map(([groupName, cols]) => (
-  <optgroup key={groupName} label={groupName}>
-    {cols.map((column) => (
-      <option key={column} value={column}>
-        {variableNames[column] || column}
-      </option>
-    ))}
-  </optgroup>
-))}
-
+                        {getAllColumns().map((column) => (
+                          <option key={column} value={column}>
+                            {variableNames[column] || column}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -1017,16 +899,11 @@ if (config.xAxis === "DebtVsSavings") {
                         value={tempConfig.yAxis}
                         onChange={(e) => setTempConfig({...tempConfig, yAxis: e.target.value})}
                       >
-                       
-  {Object.entries(axisOptions).map(([groupName, cols]) => (
-    <optgroup key={groupName} label={groupName}>
-      {cols.map((column) => (
-        <option key={column} value={column}>
-          {variableNames[column] || column}
-        </option>
-      ))}
-    </optgroup>
-  ))}
+                        {getAllColumns().map((column) => (
+                          <option key={column} value={column}>
+                            {variableNames[column] || column}
+                          </option>
+                        ))}
                       </select>
                     </div>
 

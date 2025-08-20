@@ -118,7 +118,7 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
   const renderContent = () => {
     switch (currentUser) {
       case 'member':
-        return <MemberContent activeTab={activeTab} isDark={isDark} />;
+        return <MemberContent activeTab={activeTab} isDark={isDark} currentUserId={"U1086"} />;
       case 'advisor':
         return <AdvisorContent activeTab={activeTab} isDark={isDark} />;
       case 'regulator':
