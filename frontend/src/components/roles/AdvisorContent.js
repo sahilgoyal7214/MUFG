@@ -125,6 +125,74 @@ function parseCSV(text) {
 
 export default function AdvisorContent({ activeTab, isDark }) {
   const [clients, setClients] = useState([]);
+
+  // Enhanced chart builder state (from member)
+  const [chartConfig, setChartConfig] = useState({
+    xAxis: 'Age',
+    yAxis: 'Current_Savings',
+    chartType: 'scatter'
+  });
+
+  const [gridCharts, setGridCharts] = useState([
+    {
+      id: 1,
+      xAxis: 'Age',
+      yAxis: 'Current_Savings',
+      chartType: 'scatter',
+      isConfigured: true,
+      colorScheme: 'default',
+      showInsights: true,
+      customColors: {
+        primary: '#3b82f6',
+        secondary: '#8b5cf6',
+        accent: '#06d6a0'
+      }
+    },
+    { id: 2, isConfigured: false }
+  ]);
+
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const [showAIInsightsModal, setShowAIInsightsModal] = useState(false);
+  const [activeInsightChartId, setActiveInsightChartId] = useState(null);
+  const [editingChartId, setEditingChartId] = useState(null);
+  const [tempConfig, setTempConfig] = useState({
+    xAxis: 'Age',
+    yAxis: 'Current_Savings',
+    chartType: 'scatter',
+    colorScheme: 'default',
+    showInsights: true,
+    customColors: {
+      primary: '#3b82f6',
+      secondary: '#8b5cf6',
+      accent: '#06d6a0'
+    }
+  });
+  const [activeDropdown, setActiveDropdown] = useState(null);
+
+  // Color schemes
+  const colorSchemes = {
+    default: {
+      name: 'Default',
+      colors: ['#3b82f6', '#8b5cf6', '#06d6a0'],
+      gradient: 'from-blue-500 to-purple-400'
+    },
+    vibrant: {
+      name: 'Vibrant',
+      colors: ['#ff6b9d', '#c44569', '#f8b500', '#feca57', '#ff9ff3'],
+      gradient: 'from-pink-500 to-orange-400'
+    },
+    ocean: {
+      name: 'Ocean',
+      colors: ['#0ea5e9', '#06b6d4', '#14b8a6', '#10b981'],
+      gradient: 'from-sky-500 to-teal-400'
+    },
+    sunset: {
+      name: 'Sunset',
+      colors: ['#f59e0b', '#f97316', '#ef4444', '#ec4899'],
+      gradient: 'from-amber-500 to-pink-500'
+    }
+  };
   useEffect(() => {
     fetch('/dummy_clients.csv')
       .then(res => res.text())
@@ -464,249 +532,945 @@ export default function AdvisorContent({ activeTab, isDark }) {
     </div>
   );
 
-  // Chart builder state
-  const [chartConfig, setChartConfig] = useState({
-    xAxis: 'Age',
-    yAxis: 'Current_Savings',
-    chartType: 'scatter'
-  });
-  const [gridCharts, setGridCharts] = useState([
-    { id: 1, xAxis: 'Age', yAxis: 'Current_Savings', chartType: 'scatter', isConfigured: false }
-  ]);
-  const [showConfigModal, setShowConfigModal] = useState(false);
-  const [editingChartId, setEditingChartId] = useState(null);
-  const [tempConfig, setTempConfig] = useState({
-    xAxis: 'Age',
-    yAxis: 'Current_Savings',
-    chartType: 'scatter'
-  });
-  const [activeDropdown, setActiveDropdown] = useState(null);
-
-  // Chart variable display names (from dummy data columns)
+  // Enhanced variable names for advisor data
   const variableNames = {
-    Age: 'Age',
-    Annual_Income: 'Annual Income',
-    Current_Savings: 'Current Savings',
+    Age: 'Age (years)',
+    Annual_Income: 'Annual Income ($)',
+    Current_Savings: 'Current Savings ($)',
     Risk_Tolerance: 'Risk Tolerance',
     Retirement_Age_Goal: 'Retirement Age Goal',
-    Transaction_Amount: 'Transaction Amount',
+    Transaction_Amount: 'Transaction Amount ($)',
     Transaction_Channel: 'Transaction Channel',
     Transaction_Date: 'Transaction Date',
     Transaction_ID: 'Transaction ID'
-    // Add more if needed from dummy_clients.csv
   };
 
-  // Get chart data from dummy clients
+  // Sample AI insights for advisor
+  const getAIInsights = (chart) => {
+    return [
+      {
+        icon: '📈',
+        title: 'Client Portfolio Analysis',
+        text: 'Strong correlation between age and savings. Clients aged 40+ show accelerated wealth accumulation patterns, suggesting optimal retirement preparation.'
+      },
+      {
+        icon: '💡',
+        title: 'Advisory Opportunity',
+        text: 'Clients with moderate risk tolerance and high income show potential for increased contribution recommendations. Consider portfolio optimization strategies.'
+      },
+      {
+        icon: '⚠️',
+        title: 'Risk Assessment',
+        text: 'Several clients with high-risk tolerance have savings below recommended benchmarks for their age group. Intervention recommended.'
+      },
+      {
+        icon: '🎯',
+        title: 'Performance Insight',
+        text: 'Clients with consistent transaction patterns achieve 31% better retirement outcomes compared to irregular contributors.'
+      }
+    ];
+  };
+
+  // Function to get chart data based on configuration
   const getChartData = (config) => {
     if (!clients.length) return [];
-    const x = clients.map(c => {
-      const v = c[config.xAxis];
-      return isNaN(Number(v)) ? v : Number(v);
-    });
-    const y = clients.map(c => {
-      const v = c[config.yAxis];
-      return isNaN(Number(v)) ? v : Number(v);
-    });
-    switch (config.chartType) {
-      case 'scatter':
-        return [{ x, y, type: 'scatter', mode: 'markers', marker: { color: '#047857' } }];
-      case 'bar':
-        return [{ x, y, type: 'bar', marker: { color: '#6366f1' } }];
-      case 'line':
-        return [{ x, y, type: 'scatter', mode: 'lines', line: { color: '#6366f1' } }];
-      case 'histogram':
-        return [{ x, type: 'histogram', marker: { color: '#6366f1' } }];
-      default:
-        return [];
+    
+    const getClientValue = (client, field) => {
+      const value = client[field];
+      if (field === 'Risk_Tolerance') return value;
+      return isNaN(Number(value)) ? value : Number(value);
+    };
+
+    const xData = clients.map(client => getClientValue(client, config.xAxis));
+    const yData = clients.map(client => getClientValue(client, config.yAxis));
+    const colors = colorSchemes[config.colorScheme]?.colors || colorSchemes.default.colors;
+    
+    if (config.chartType === 'scatter') {
+      return [{
+        x: xData,
+        y: yData,
+        type: 'scatter',
+        mode: 'markers',
+        marker: { 
+          color: colors,
+          size: 10,
+          line: { color: isDark ? '#374151' : 'white', width: 2 },
+          opacity: 0.8
+        },
+        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+      }];
+    } else if (config.chartType === 'bar') {
+      return [{
+        x: xData,
+        y: yData,
+        type: 'bar',
+        marker: { 
+          color: colors[0],
+          opacity: 0.8,
+          line: { color: isDark ? '#374151' : 'white', width: 1 }
+        },
+        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+      }];
+    } else if (config.chartType === 'line') {
+      return [{
+        x: xData,
+        y: yData,
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { color: colors[0], width: 3 },
+        marker: { size: 8, color: colors[0] },
+        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+      }];
+    } else if (config.chartType === 'histogram') {
+      return [{
+        x: yData,
+        type: 'histogram',
+        marker: { color: colors[0], opacity: 0.8 },
+        name: `Distribution of ${variableNames[config.yAxis]}`
+      }];
     }
   };
 
-  // Chart modal handlers
+  // Enhanced chart handlers
   const handleAddChart = (chartId) => {
     setEditingChartId(chartId);
-    setTempConfig({ xAxis: 'Age', yAxis: 'Current_Savings', chartType: 'scatter' });
+    setTempConfig({
+      xAxis: 'Age',
+      yAxis: 'Current_Savings',
+      chartType: 'scatter',
+      colorScheme: 'default',
+      showInsights: true,
+      customColors: {
+        primary: '#3b82f6',
+        secondary: '#8b5cf6',
+        accent: '#06d6a0'
+      }
+    });
     setShowConfigModal(true);
   };
+
   const handleEditChart = (chartId) => {
     const chart = gridCharts.find(c => c.id === chartId);
     setEditingChartId(chartId);
     setTempConfig({
-      xAxis: chart.xAxis || 'Age',
-      yAxis: chart.yAxis || 'Current_Savings',
-      chartType: chart.chartType || 'scatter'
+      xAxis: chart.xAxis,
+      yAxis: chart.yAxis,
+      chartType: chart.chartType,
+      colorScheme: chart.colorScheme || 'default',
+      showInsights: chart.showInsights !== false,
+      customColors: chart.customColors || {
+        primary: '#3b82f6',
+        secondary: '#8b5cf6',
+        accent: '#06d6a0'
+      }
     });
     setShowConfigModal(true);
+    setActiveDropdown(null);
   };
-  const handleSaveChart = () => {
-    setGridCharts(charts => {
-      const updated = charts.map(c =>
-        c.id === editingChartId
-          ? { ...c, ...tempConfig, isConfigured: true }
-          : c
-      );
-      // If a chart was just configured and there are less than 4 slots, add a new slot
-      if (updated.filter(c => c.isConfigured).length < 4 && updated.length < 4 && updated.filter(c => c.isConfigured).length === updated.length) {
-        updated.push({ id: Date.now() + Math.random(), isConfigured: false });
+
+  const handleCustomizeChart = (chartId) => {
+    const chart = gridCharts.find(c => c.id === chartId);
+    setEditingChartId(chartId);
+    setTempConfig({
+      ...chart,
+      customColors: chart.customColors || {
+        primary: '#3b82f6',
+        secondary: '#8b5cf6',
+        accent: '#06d6a0'
       }
+    });
+    setShowCustomizeModal(true);
+    setActiveDropdown(null);
+  };
+
+  const handleViewAIInsights = (chartId) => {
+    setActiveInsightChartId(chartId);
+    setShowAIInsightsModal(true);
+    setActiveDropdown(null);
+  };
+
+  const handleSaveChart = () => {
+    setGridCharts(prev => {
+      const updated = prev.map(chart =>
+        chart.id === editingChartId
+          ? { ...chart, ...tempConfig, isConfigured: true }
+          : chart
+      );
+
+      const maxConfiguredId = Math.max(...updated.filter(c => c.isConfigured).map(c => c.id));
+
+      if (updated.length < 4 && maxConfiguredId === updated.length) {
+        updated.push({ id: updated.length + 1, isConfigured: false });
+      }
+
       return updated;
     });
+
     setShowConfigModal(false);
+    setShowCustomizeModal(false);
+    setEditingChartId(null);
   };
+
   const handleDeleteChart = (chartId) => {
-    setGridCharts(charts => {
-      const filtered = charts.filter(c => c.id !== chartId);
-      // Only show an extra slot if there is at least one configured chart and less than 4 slots
-      if (filtered.filter(c => c.isConfigured).length < 4 && filtered.length < 4 && filtered.filter(c => c.isConfigured).length === filtered.length) {
-        filtered.push({ id: Date.now() + Math.random(), isConfigured: false });
-      }
-      return filtered;
+    setGridCharts(prev => {
+      const updated = prev.filter(chart => chart.id !== chartId);
+      const reIndexed = updated.map((chart, index) => ({
+        ...chart,
+        id: index + 1
+      }));
+      return reIndexed;
     });
     setActiveDropdown(null);
   };
+
   useEffect(() => {
-    const closeDropdown = (e) => setActiveDropdown(null);
-    window.addEventListener('click', closeDropdown);
-    return () => window.removeEventListener('click', closeDropdown);
+    const handleClickOutside = (e) => {
+      if (e.target.closest('.dropdown-menu') || e.target.closest('.dropdown-toggle')) {
+        return;
+      }
+      setActiveDropdown(null);
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+
+
   // Explore Charts tab
-  const renderExploreChartsTab = () => {
-    // Only show up to 4 chart slots, and only show the next slot if the previous is configured
-    const visibleCharts = [];
-    for (let i = 0; i < gridCharts.length && i < 4; i++) {
-      if (i === 0 || gridCharts[i - 1].isConfigured) {
-        visibleCharts.push(gridCharts[i]);
-      } else {
-        break;
-      }
-    }
-    // Detect dark mode from body class
-    // const isDark = typeof document !== 'undefined' && document.body.classList.contains('dark');
-    return (
-      <div className={isDark ? 'p-8 min-h-screen bg-gray-900' : 'p-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen'}>
+  const renderExploreChartsTab = () => (
+    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 to-blue-50'}`}>
+      <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <h2 className={isDark ? 'text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mb-6' : 'text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6'}>Explore Charts</h2>
+          <h2
+          className={
+            isDark
+              ? 'text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent mb-6'
+              : 'text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-800 bg-clip-text text-transparent mb-6'
+          }
+          >
+            Explore Charts
+          </h2>
+          {/* 4-Grid Chart Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {visibleCharts.map((chart) => (
-              <div key={chart.id} className={isDark ? 'bg-gray-800 rounded-2xl shadow-lg border border-gray-700 backdrop-blur-sm relative' : 'bg-white rounded-2xl shadow-lg border border-gray-100 backdrop-blur-sm relative'}>
+            {gridCharts.map((chart) => (
+              <div key={chart.id} className={`rounded-2xl shadow-xl border transition-all duration-300 backdrop-blur-sm ${
+                isDark 
+                  ? 'bg-gray-800 border-gray-700' 
+                  : 'bg-white border-gray-100'
+              }`}>
                 {chart.isConfigured ? (
                   <>
-                    <div className={isDark ? 'flex justify-between items-center p-4 border-b border-gray-700' : 'flex justify-between items-center p-4 border-b border-gray-200'}>
-                      <h3 className={isDark ? 'text-lg font-semibold text-white truncate' : 'text-lg font-semibold text-gray-900 truncate'}>
+                    {/* Chart Header with Options */}
+                    <div className={`flex justify-between items-center p-4 border-b transition-colors duration-300 ${
+                      isDark ? 'border-gray-700' : 'border-gray-200'
+                    }`}>
+                      <h3 className={`text-lg font-semibold truncate transition-colors duration-300 ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}>
                         {variableNames[chart.xAxis]} vs {variableNames[chart.yAxis]}
                       </h3>
-                      <div className="relative">
+                      <div className="flex items-center space-x-2">
+                        {/* AI Insights Button */}
                         <button
-                          onClick={e => { e.stopPropagation(); setActiveDropdown(chart.id); }}
-                          className={isDark ? 'p-2 hover:bg-gray-700 rounded-lg transition-colors dropdown-toggle' : 'p-2 hover:bg-gray-100 rounded-lg transition-colors dropdown-toggle'}
+                          onClick={() => handleViewAIInsights(chart.id)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                            isDark 
+                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700' 
+                              : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600'
+                          } transform hover:scale-105 shadow-lg`}
                         >
-                          <svg className={isDark ? 'w-5 h-5 text-gray-300' : 'w-5 h-5 text-gray-600'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01"/>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                           </svg>
+                          <span>AI Insights</span>
                         </button>
-                        {activeDropdown === chart.id && (
-                          <div className={isDark ? 'absolute right-0 top-full mt-2 w-48 bg-gray-800 rounded-xl shadow-lg border border-gray-700 z-50 dropdown-menu' : 'absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50 dropdown-menu'} onClick={e => e.stopPropagation()}>
-                            <div className="py-2">
-                              <button onClick={() => handleEditChart(chart.id)} className={isDark ? 'w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex items-center' : 'w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center'}>
-                                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                </svg>
-                                Edit Chart
-                              </button>
-                              <button onClick={() => handleDeleteChart(chart.id)} className={isDark ? 'w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex items-center' : 'w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center'}>
-                                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                </svg>
-                                Delete Chart
-                              </button>
+
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveDropdown(activeDropdown === chart.id ? null : chart.id);
+                            }}
+                            className={`p-2 rounded-lg transition-all duration-300 dropdown-toggle ${
+                              isDark 
+                                ? 'hover:bg-gray-700 text-gray-300' 
+                                : 'hover:bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01"/>
+                            </svg>
+                          </button>
+                          
+                          {activeDropdown === chart.id && (
+                            <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl border z-50 dropdown-menu transition-all duration-300 ${
+                              isDark 
+                                ? 'bg-gray-800 border-gray-600' 
+                                : 'bg-white border-gray-200'
+                            }`} onClick={(e) => e.stopPropagation()}>
+                              <div className="py-2">
+                                <button
+                                  onClick={() => handleEditChart(chart.id)}
+                                  className={`w-full px-4 py-3 text-left text-sm flex items-center transition-colors duration-300 ${
+                                    isDark 
+                                      ? 'text-gray-300 hover:bg-gray-700' 
+                                      : 'text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                  </svg>
+                                  Edit Chart
+                                </button>
+                                <button
+                                  onClick={() => handleCustomizeChart(chart.id)}
+                                  className={`w-full px-4 py-3 text-left text-sm flex items-center transition-colors duration-300 ${
+                                    isDark 
+                                      ? 'text-gray-300 hover:bg-gray-700' 
+                                      : 'text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM7 3H5a2 2 0 00-2 2v12a4 4 0 004 4h2a2 2 0 002-2V5a2 2 0 00-2-2z"/>
+                                  </svg>
+                                  Customize Style
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteChart(chart.id)}
+                                  className={`w-full px-4 py-3 text-left text-sm flex items-center transition-colors duration-300 ${
+                                    isDark 
+                                      ? 'text-red-400 hover:bg-gray-700' 
+                                      : 'text-red-600 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                  </svg>
+                                  Delete Chart
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Chart Content */}
                     <div className="p-4">
                       <div className="h-80 rounded-lg overflow-hidden">
                         <Plot
                           data={getChartData(chart)}
                           layout={{
-                            config: { responsive: true, displayModeBar: false, displaylogo: false },
-                            xaxis: { title: { text: variableNames[chart.xAxis], font: { size: 12, color: isDark ? '#9ca3af' : '#6b7280' } }, gridcolor: isDark ? '#374151' : '#f3f4f6', linecolor: isDark ? '#4b5563' : '#e5e7eb', tickfont: { color: isDark ? '#9ca3af' : '#6b7280' } },
-                            yaxis: { title: { text: variableNames[chart.yAxis], font: { size: 12, color: isDark ? '#9ca3af' : '#6b7280' } }, gridcolor: isDark ? '#374151' : '#f3f4f6', linecolor: isDark ? '#4b5563' : '#e5e7eb', tickfont: { color: isDark ? '#9ca3af' : '#6b7280' } },
+                            xaxis: { 
+                              title: { 
+                                text: variableNames[chart.xAxis], 
+                                font: { size: 12, color: isDark ? '#9ca3af' : '#6b7280' } 
+                              },
+                              gridcolor: isDark ? '#374151' : '#f3f4f6',
+                              linecolor: isDark ? '#4b5563' : '#e5e7eb',
+                              tickfont: { color: isDark ? '#9ca3af' : '#6b7280' }
+                            },
+                            yaxis: { 
+                              title: { 
+                                text: variableNames[chart.yAxis], 
+                                font: { size: 12, color: isDark ? '#9ca3af' : '#6b7280' } 
+                              },
+                              gridcolor: isDark ? '#374151' : '#f3f4f6',
+                              linecolor: isDark ? '#4b5563' : '#e5e7eb',
+                              tickfont: { color: isDark ? '#9ca3af' : '#6b7280' }
+                            },
                             showlegend: false,
-                            margin: { t:20, r: 20, b: 50, l: 70 },
+                            margin: { t: 20, r: 20, b: 50, l: 70 },
                             plot_bgcolor: isDark ? '#1f2937' : '#fafafa',
                             paper_bgcolor: isDark ? '#1f2937' : 'white',
                             font: { family: 'Inter, system-ui, sans-serif' }
                           }}
                           style={{ width: '100%', height: '100%' }}
-                          config={{ responsive: true, displayModeBar: true, displaylogo: false, modeBarButtonsToRemove: ["sendDataToCloud"], toImageButtonOptions: { format: "png", filename: "chart", height: 800, width: 1200, scale: 1 } }}
+                          config={{ 
+                            responsive: true,
+                            displayModeBar: true,
+                            displaylogo: false,
+                            modeBarButtonsToRemove: ["sendDataToCloud"],
+                            toImageButtonOptions: {
+                              format: "png",
+                              filename: "chart",
+                              height: 800,
+                              width: 1200,
+                              scale: 1
+                            }
+                          }}
                         />
                       </div>
                     </div>
                   </>
                 ) : (
-                  <div onClick={() => handleAddChart(chart.id)} className={isDark ? 'h-96 border-2 border-dashed border-gray-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-gray-800/50 transition-all group' : 'h-96 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 transition-all group'}>
-                    <div className={isDark ? 'w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg' : 'w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg'}>
+                  // Add Chart Placeholder
+                  <div 
+                    onClick={() => handleAddChart(chart.id)}
+                    className={`h-96 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 group ${
+                      isDark 
+                        ? 'border-gray-600 hover:border-blue-500 hover:bg-gray-800/50' 
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50'
+                    }`}
+                  >
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-all duration-300 shadow-lg ${
+                      isDark 
+                        ? 'bg-gradient-to-br from-blue-600 to-purple-600' 
+                        : 'bg-gradient-to-br from-blue-500 to-purple-500'
+                    }`}>
                       <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                       </svg>
                     </div>
-                    <h3 className={isDark ? 'text-lg font-semibold text-gray-300 group-hover:text-blue-400 transition-colors' : 'text-lg font-semibold text-gray-600 group-hover:text-blue-600 transition-colors'}>Add Chart</h3>
-                    <p className={isDark ? 'text-sm text-gray-400 group-hover:text-blue-300 transition-colors mt-2' : 'text-sm text-gray-500 group-hover:text-blue-500 transition-colors mt-2'}>Click to configure a new chart</p>
+                    <h3 className={`text-lg font-semibold transition-colors duration-300 ${
+                      isDark 
+                        ? 'text-gray-300 group-hover:text-blue-400' 
+                        : 'text-gray-600 group-hover:text-blue-600'
+                    }`}>Add Chart</h3>
+                    <p className={`text-sm mt-2 transition-colors duration-300 ${
+                      isDark 
+                        ? 'text-gray-400 group-hover:text-blue-300' 
+                        : 'text-gray-500 group-hover:text-blue-500'
+                    }`}>Click to configure a new chart</p>
                   </div>
                 )}
               </div>
             ))}
           </div>
+
+          {/* AI Insights Modal */}
+          {showAIInsightsModal && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
+              <div className={`rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transition-all duration-300 ${
+                isDark ? 'bg-gray-800' : 'bg-white'
+              }`}>
+                {/* Modal Header */}
+                <div className={`flex justify-between items-center p-6 border-b transition-colors duration-300 ${
+                  isDark ? 'border-gray-700' : 'border-gray-200'
+                }`}>
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isDark 
+                        ? 'bg-gradient-to-br from-purple-600 to-blue-600' 
+                        : 'bg-gradient-to-br from-purple-500 to-blue-500'
+                    }`}>
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className={`text-xl font-bold transition-colors duration-300 ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}>AI Insights</h3>
+                      {activeInsightChartId && (
+                        <p className={`text-sm transition-colors duration-300 ${
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          {(() => {
+                            const chart = gridCharts.find(c => c.id === activeInsightChartId);
+                            return chart ? `${variableNames[chart.xAxis]} vs ${variableNames[chart.yAxis]}` : '';
+                          })()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAIInsightsModal(false)}
+                    className={`p-2 rounded-lg transition-all duration-300 ${
+                      isDark 
+                        ? 'hover:bg-gray-700 text-gray-300' 
+                        : 'hover:bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-6">
+                  {/* Loading Animation */}
+                  <div className={`mb-6 p-4 rounded-xl border-2 border-dashed transition-all duration-300 ${
+                    isDark 
+                      ? 'border-gray-600 bg-gray-800/30' 
+                      : 'border-gray-300 bg-gray-50'
+                  }`}>
+                    <div className="flex items-center justify-center space-x-3 mb-3">
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-500 border-t-transparent"></div>
+                      <span className={`text-sm font-medium transition-colors duration-300 ${
+                        isDark ? 'text-gray-300' : 'text-gray-700'
+                      }`}>
+                        Analyzing chart data with AI...
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                      <div className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full animate-pulse" style={{width: '75%'}}></div>
+                    </div>
+                    <p className={`text-xs text-center transition-colors duration-300 ${
+                      isDark ? 'text-gray-500' : 'text-gray-500'
+                    }`}>
+                      Processing patterns and generating insights...
+                    </p>
+                  </div>
+
+                  {/* AI Insights List */}
+                  <div className="space-y-4">
+                    {getAIInsights().map((insight, index) => (
+                      <div key={index} className={`p-4 rounded-xl border transition-all duration-300 hover:shadow-lg ${
+                        isDark 
+                          ? 'bg-gray-700/50 border-gray-600 hover:border-gray-500' 
+                          : 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:border-blue-300'
+                      }`}>
+                        <div className="flex items-start space-x-4">
+                          <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-lg ${
+                            isDark 
+                              ? 'bg-gray-600' 
+                              : 'bg-white shadow-sm'
+                          }`}>
+                            {insight.icon}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className={`font-semibold mb-2 transition-colors duration-300 ${
+                              isDark ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              {insight.title}
+                            </h4>
+                            <p className={`text-sm leading-relaxed transition-colors duration-300 ${
+                              isDark ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                              {insight.text}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex space-x-4 mt-8">
+                    <button
+                      onClick={() => setShowAIInsightsModal(false)}
+                      className={`flex-1 px-6 py-3 border-2 rounded-xl transition-all duration-300 ${
+                        isDark 
+                          ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log('Exporting insights...');
+                      }}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
+                    >
+                      Export Insights
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Chart Configuration Modal */}
           {showConfigModal && (
-            <div className={isDark ? 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4' : 'fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4'}>
-              <div className={isDark ? 'bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6' : 'bg-white rounded-2xl shadow-2xl max-w-md w-full p-6'}>
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
+              <div className={`rounded-2xl shadow-2xl max-w-md w-full p-6 transition-all duration-300 ${
+                isDark ? 'bg-gray-800' : 'bg-white'
+              }`}>
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className={isDark ? 'text-xl font-bold text-white' : 'text-xl font-bold text-gray-900'}>Configure Chart</h3>
-                  <button onClick={() => setShowConfigModal(false)} className={isDark ? 'p-2 hover:bg-gray-700 rounded-lg transition-colors' : 'p-2 hover:bg-gray-100 rounded-lg transition-colors'}>
+                  <h3 className={`text-xl font-bold transition-colors duration-300 ${
+                    isDark ? 'text-white' : 'text-gray-900'
+                  }`}>Configure Chart</h3>
+                  <button
+                    onClick={() => setShowConfigModal(false)}
+                    className={`p-2 rounded-lg transition-all duration-300 ${
+                      isDark 
+                        ? 'hover:bg-gray-700 text-gray-300' 
+                        : 'hover:bg-gray-100 text-gray-600'
+                    }`}
+                  >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                   </button>
                 </div>
+
                 <div className="space-y-6">
+                  {/* Chart Type */}
                   <div>
-                    <label className={isDark ? 'block text-sm font-bold text-gray-200 mb-3' : 'block text-sm font-bold text-gray-700 mb-3'}>Chart Type</label>
-                    <select className={isDark ? 'w-full border-2 border-gray-600 bg-gray-700 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all' : 'w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all'} value={tempConfig.chartType} onChange={e => setTempConfig({ ...tempConfig, chartType: e.target.value })}>
-                      <option value="scatter">📊 Scatter Plot</option>
-                      <option value="bar">📈 Bar Chart</option>
-                      <option value="line">📉 Line Chart</option>
-                      <option value="histogram">📊 Histogram</option>
+                    <label className={`block text-sm font-bold mb-3 transition-colors duration-300 ${
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Chart Type</label>
+                    <select 
+                      className={`w-full border-2 rounded-xl px-4 py-3 transition-all duration-300 ${
+                        isDark 
+                          ? 'border-gray-600 bg-gray-700 text-white focus:border-blue-500' 
+                          : 'border-gray-300 bg-white text-gray-900 focus:border-blue-500'
+                      } focus:ring-2 focus:ring-blue-200`}
+                      value={tempConfig.chartType}
+                      onChange={(e) => setTempConfig({...tempConfig, chartType: e.target.value})}
+                    >
+                      <option value="scatter">Scatter Plot</option>
+                      <option value="bar">Bar Chart</option>
+                      <option value="line">Line Chart</option>
+                      <option value="histogram">Histogram</option>
                     </select>
                   </div>
+
+                  {/* X-Axis */}
                   <div>
-                    <label className={isDark ? 'block text-sm font-bold text-gray-200 mb-3' : 'block text-sm font-bold text-gray-700 mb-3'}>X-Axis Variable</label>
-                    <select className={isDark ? 'w-full border-2 border-gray-600 bg-gray-700 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all' : 'w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all'} value={tempConfig.xAxis} onChange={e => setTempConfig({ ...tempConfig, xAxis: e.target.value })}>
+                    <label className={`block text-sm font-bold mb-3 transition-colors duration-300 ${
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>X-Axis Variable</label>
+                    <select 
+                      className={`w-full border-2 rounded-xl px-4 py-3 transition-all duration-300 ${
+                        isDark 
+                          ? 'border-gray-600 bg-gray-700 text-white focus:border-blue-500' 
+                          : 'border-gray-300 bg-white text-gray-900 focus:border-blue-500'
+                      } focus:ring-2 focus:ring-blue-200`}
+                      value={tempConfig.xAxis}
+                      onChange={(e) => setTempConfig({...tempConfig, xAxis: e.target.value})}
+                    >
                       {Object.entries(variableNames).map(([key, label]) => (
                         <option key={key} value={key}>{label}</option>
                       ))}
                     </select>
                   </div>
+
+                  {/* Y-Axis */}
                   <div>
-                    <label className={isDark ? 'block text-sm font-bold text-gray-200 mb-3' : 'block text-sm font-bold text-gray-700 mb-3'}>Y-Axis Variable</label>
-                    <select className={isDark ? 'w-full border-2 border-gray-600 bg-gray-700 text-white rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all' : 'w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all'} value={tempConfig.yAxis} onChange={e => setTempConfig({ ...tempConfig, yAxis: e.target.value })}>
+                    <label className={`block text-sm font-bold mb-3 transition-colors duration-300 ${
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Y-Axis Variable</label>
+                    <select 
+                      className={`w-full border-2 rounded-xl px-4 py-3 transition-all duration-300 ${
+                        isDark 
+                          ? 'border-gray-600 bg-gray-700 text-white focus:border-purple-500' 
+                          : 'border-gray-300 bg-white text-gray-900 focus:border-purple-500'
+                      } focus:ring-2 focus:ring-purple-200`}
+                      value={tempConfig.yAxis}
+                      onChange={(e) => setTempConfig({...tempConfig, yAxis: e.target.value})}
+                    >
                       {Object.entries(variableNames).map(([key, label]) => (
                         <option key={key} value={key}>{label}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Color Scheme */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-3 transition-colors duration-300 ${
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Color Scheme</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.entries(colorSchemes).map(([key, scheme]) => (
+                        <button
+                          key={key}
+                          onClick={() => setTempConfig({...tempConfig, colorScheme: key})}
+                          className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                            tempConfig.colorScheme === key
+                              ? 'border-blue-500 ring-2 ring-blue-200'
+                              : isDark 
+                                ? 'border-gray-600 hover:border-gray-500' 
+                                : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          <div className={`w-full h-6 rounded-lg mb-2 bg-gradient-to-r ${scheme.gradient}`}></div>
+                          <span className={`text-sm font-medium transition-colors duration-300 ${
+                            isDark ? 'text-gray-300' : 'text-gray-700'
+                          }`}>{scheme.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Show Insights Toggle */}
+                  <div className="flex items-center justify-between">
+                    <label className={`text-sm font-bold transition-colors duration-300 ${
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Show AI Insights</label>
+                    <button
+                      onClick={() => setTempConfig({...tempConfig, showInsights: !tempConfig.showInsights})}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${
+                        tempConfig.showInsights ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
+                          tempConfig.showInsights ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
                   </div>
                 </div>
+
+                {/* Modal Actions */}
                 <div className="flex space-x-4 mt-8">
-                  <button onClick={() => setShowConfigModal(false)} className={isDark ? 'flex-1 px-6 py-3 border-2 border-gray-600 text-gray-300 rounded-xl hover:bg-gray-700 transition-all' : 'flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all'}>Cancel</button>
-                  <button onClick={handleSaveChart} className={isDark ? 'flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg' : 'flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg'}>Save Chart</button>
+                  <button
+                    onClick={() => setShowConfigModal(false)}
+                    className={`flex-1 px-6 py-3 border-2 rounded-xl transition-all duration-300 ${
+                      isDark 
+                        ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveChart}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Save Chart
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Customization Modal */}
+          {showCustomizeModal && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
+              <div className={`rounded-2xl shadow-2xl max-w-lg w-full p-6 transition-all duration-300 ${
+                isDark ? 'bg-gray-800' : 'bg-white'
+              }`}>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-xl font-bold transition-colors duration-300 ${
+                    isDark ? 'text-white' : 'text-gray-900'
+                  }`}>Customize Style</h3>
+                  <button
+                    onClick={() => setShowCustomizeModal(false)}
+                    className={`p-2 rounded-lg transition-all duration-300 ${
+                      isDark 
+                        ? 'hover:bg-gray-700 text-gray-300' 
+                        : 'hover:bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Color Schemes */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-4 transition-colors duration-300 ${
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Choose Color Palette</label>
+                    <div className="grid grid-cols-1 gap-3">
+                      {Object.entries(colorSchemes).map(([key, scheme]) => (
+                        <button
+                          key={key}
+                          onClick={() => setTempConfig({...tempConfig, colorScheme: key})}
+                          className={`p-4 rounded-xl border-2 transition-all duration-300 flex items-center space-x-4 ${
+                            tempConfig.colorScheme === key
+                              ? 'border-blue-500 ring-2 ring-blue-200 transform scale-105'
+                              : isDark 
+                                ? 'border-gray-600 hover:border-gray-500' 
+                                : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          <div className="flex space-x-1">
+                            {scheme.colors.slice(0, 5).map((color, index) => (
+                              <div
+                                key={index}
+                                className="w-8 h-8 rounded-full shadow-sm"
+                                style={{ backgroundColor: color }}
+                              ></div>
+                            ))}
+                          </div>
+                          <div>
+                            <span className={`font-semibold transition-colors duration-300 ${
+                              isDark ? 'text-gray-200' : 'text-gray-900'
+                            }`}>{scheme.name}</span>
+                            {tempConfig.colorScheme === key && (
+                              <div className="flex items-center mt-1">
+                                <svg className="w-4 h-4 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span className="text-xs text-green-600">Selected</span>
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Colors Section */}
+                  {tempConfig.colorScheme === 'custom' && (
+                    <div>
+                      <label className={`block text-sm font-bold mb-4 transition-colors duration-300 ${
+                        isDark ? 'text-gray-200' : 'text-gray-700'
+                      }`}>Custom Colors</label>
+                      <div className="grid grid-cols-1 gap-4">
+                        {/* Primary */}
+                        <div className="w-full">
+                          <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          }`}>Primary</label>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="color"
+                              value={tempConfig.customColors?.primary || '#3b82f6'}
+                              onChange={(e) => setTempConfig({
+                                ...tempConfig,
+                                customColors: {
+                                  ...tempConfig.customColors,
+                                  primary: e.target.value,
+                                },
+                              })}
+                              className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer flex-shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={tempConfig.customColors?.primary || '#3b82f6'}
+                              onChange={(e) => setTempConfig({
+                                ...tempConfig,
+                                customColors: {
+                                  ...tempConfig.customColors,
+                                  primary: e.target.value,
+                                },
+                              })}
+                              className={`w-full text-xs px-2 py-2 rounded border transition-all duration-300 ${
+                                isDark
+                                  ? 'bg-gray-700 border-gray-600 text-white'
+                                  : 'bg-white border-gray-300 text-gray-900'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Secondary */}
+                        <div className="w-full">
+                          <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          }`}>Secondary</label>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="color"
+                              value={tempConfig.customColors?.secondary || '#8b5cf6'}
+                              onChange={(e) => setTempConfig({
+                                ...tempConfig,
+                                customColors: {
+                                  ...tempConfig.customColors,
+                                  secondary: e.target.value,
+                                },
+                              })}
+                              className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer flex-shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={tempConfig.customColors?.secondary || '#8b5cf6'}
+                              onChange={(e) => setTempConfig({
+                                ...tempConfig,
+                                customColors: {
+                                  ...tempConfig.customColors,
+                                  secondary: e.target.value,
+                                },
+                              })}
+                              className={`w-full text-xs px-2 py-2 rounded border transition-all duration-300 ${
+                                isDark
+                                  ? 'bg-gray-700 border-gray-600 text-white'
+                                  : 'bg-white border-gray-300 text-gray-900'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Accent */}
+                        <div className="w-full">
+                          <label className={`text-xs font-medium mb-2 block transition-colors duration-300 ${
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          }`}>Accent</label>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="color"
+                              value={tempConfig.customColors?.accent || '#06d6a0'}
+                              onChange={(e) => setTempConfig({
+                                ...tempConfig,
+                                customColors: {
+                                  ...tempConfig.customColors,
+                                  accent: e.target.value,
+                                },
+                              })}
+                              className="w-12 h-10 rounded-lg border-2 border-gray-300 cursor-pointer flex-shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={tempConfig.customColors?.accent || ''}
+                              placeholder="#RRGGBB"
+                              onChange={(e) => setTempConfig({
+                                ...tempConfig,
+                                customColors: {
+                                  ...tempConfig.customColors,
+                                  accent: e.target.value,
+                                },
+                              })}
+                              className={`w-full text-xs px-2 py-2 rounded border transition-all duration-300 ${
+                                isDark
+                                  ? 'bg-gray-700 border-gray-600 text-white'
+                                  : 'bg-white border-gray-300 text-gray-900'
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview */}
+                  <div className={`p-4 rounded-xl transition-all duration-300 ${
+                    isDark ? 'bg-gray-700/50' : 'bg-gray-50'
+                  }`}>
+                    <h4 className={`text-sm font-bold mb-3 transition-colors duration-300 ${
+                      isDark ? 'text-gray-200' : 'text-gray-700'
+                    }`}>Color Preview</h4>
+                    <div className="flex space-x-2">
+                      {(colorSchemes[tempConfig.colorScheme]?.colors || [
+                        tempConfig.customColors?.primary,
+                        tempConfig.customColors?.secondary,
+                        tempConfig.customColors?.accent
+                      ]).slice(0, 5).map((color, index) => (
+                        <div
+                          key={index}
+                          className="w-12 h-12 rounded-xl shadow-lg transform hover:scale-110 transition-transform duration-300"
+                          style={{ backgroundColor: color }}
+                        ></div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex space-x-4 mt-8">
+                  <button
+                    onClick={() => setShowCustomizeModal(false)}
+                    className={`flex-1 px-6 py-3 border-2 rounded-xl transition-all duration-300 ${
+                      isDark 
+                        ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveChart}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    Apply Style
+                  </button>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
   
   const renderContent = () => {
     switch (activeTab) {
