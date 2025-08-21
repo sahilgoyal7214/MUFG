@@ -145,6 +145,112 @@ const axisOptions = {
     Projected_NetWorth: "Projected Net Worth",
   };
 
+// PDF
+const exportToPDF = async () => {
+  if (typeof window === "undefined") return;
+  try {
+    const { jsPDF } = await import("jspdf");   // ✅ no .default here
+    const html2canvas = (await import("html2canvas")).default;
+
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text("Pension Analysis Report", 20, 20);
+
+    // Example chart capture
+    const charts = document.querySelectorAll(".plotly");
+    if (charts.length > 0) {
+      const canvas = await html2canvas(charts[0]);
+      const imgData = canvas.toDataURL("image/png");
+      doc.addImage(imgData, "PNG", 10, 20, 190, 100);
+    }
+
+    doc.save("Pension_Report.pdf");
+    addToExportHistory("Pension_Report.pdf", "2.4 MB", "PDF");
+  } catch (err) {
+    console.error("Failed to export PDF:", err);
+  }
+};
+
+
+const exportToPowerPoint = async () => {
+  if (typeof window === "undefined") return; // ✅ prevent SSR issues
+  try {
+    const PptxGenJS = (await import("pptxgenjs")).default;
+    const pptx = new PptxGenJS();
+
+    // Title slide
+    const slide1 = pptx.addSlide();
+    slide1.addText("Pension Analysis Presentation", { x: 1, y: 1, fontSize: 24, bold: true });
+    slide1.addText("Generated Report", { x: 1, y: 2, fontSize: 16 });
+
+    // KPIs slide
+    if (data.length > 0) {
+      const slide2 = pptx.addSlide();
+      slide2.addText("Key Performance Indicators", { x: 1, y: 0.5, fontSize: 20, bold: true });
+
+      const kpiData = [
+        ["Metric", "Value"],
+        ["Total Savings", `$${data[0].Current_Savings?.toLocaleString() || "N/A"}`],
+        ["Projected Pension", `$${data[0].Projected_Pension_Amount?.toLocaleString() || "N/A"}`],
+        ["Annual Return Rate", `${data[0].Annual_Return_Rate?.toFixed(1) || "N/A"}%`],
+        ["Years to Retirement", `${data[0].Retirement_Age_Goal - data[0].Age || "N/A"} years`],
+      ];
+
+      slide2.addTable(kpiData, { x: 1, y: 2, w: 8, h: 3 });
+    }
+
+    await pptx.writeFile({ fileName: "Board_Presentation.pptx" });
+    addToExportHistory("Board_Presentation.pptx", "5.2 MB", "PPTX");
+  } catch (err) {
+    console.error("Failed to export PowerPoint:", err);
+  }
+};
+const exportToExcel = async () => {
+  const XLSX = await import('xlsx');
+  
+  const wb = XLSX.utils.book_new();
+  
+  // Create summary sheet
+  const summaryData = data.length > 0 ? [
+    ['Metric', 'Value'],
+    ['Total Savings', data[0].Current_Savings || 'N/A'],
+    ['Projected Pension', data[0].Projected_Pension_Amount || 'N/A'],
+    ['Annual Return Rate', data[0].Annual_Return_Rate || 'N/A'],
+    ['Years to Retirement', (data[0].Retirement_Age_Goal - data[0].Age) || 'N/A']
+  ] : [];
+  
+  const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, summaryWS, 'Summary');
+  
+  // Create raw data sheet
+  if (data.length > 0) {
+    const dataWS = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, dataWS, 'Raw Data');
+  }
+  
+  XLSX.writeFile(wb, 'Member_Analysis_Charts.xlsx');
+  
+  addToExportHistory('Member_Analysis_Charts.xlsx', '1.8 MB', 'XLSX');
+};
+
+// Export history state
+const [exportHistory, setExportHistory] = useState([
+  { name: 'Q4_2024_Pension_Report.pdf', date: '2024-12-15', size: '2.4 MB', status: 'completed', type: 'PDF' },
+  { name: 'Member_Analysis_Charts.xlsx', date: '2024-12-10', size: '1.8 MB', status: 'completed', type: 'XLSX' },
+  { name: 'Board_Presentation.pptx', date: '2024-12-08', size: '5.2 MB', status: 'completed', type: 'PPTX' }
+]);
+
+const addToExportHistory = (name, size, type) => {
+  const newExport = {
+    name,
+    date: new Date().toISOString().split('T')[0],
+    size,
+    status: 'completed',
+    type
+  };
+  setExportHistory(prev => [newExport, ...prev]);
+};
+
   // Load data from JSON file
  useEffect(() => {
   const loadData = async () => {
@@ -626,6 +732,105 @@ if (config.xAxis === "DebtVsSavings") {
                 </div>
               </div>
             </div>
+
+            {/* KPIs Section */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  {[
+    {
+      title: 'Total Savings',
+      value: data.length > 0 ? `$${data[0].Current_Savings?.toLocaleString() || 'N/A'}` : 'Loading...',
+      change: '+12.5%',
+      changeType: 'positive',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+        </svg>
+      )
+    },
+    {
+      title: 'Projected Pension',
+      value: data.length > 0 ? `$${data[0].Projected_Pension_Amount?.toLocaleString() || 'N/A'}` : 'Loading...',
+      change: '+8.2%',
+      changeType: 'positive',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
+      )
+    },
+    {
+      title: 'Annual Return',
+      value: data.length > 0 ? `${data[0].Annual_Return_Rate?.toFixed(1) || 'N/A'}%` : 'Loading...',
+      change: '+2.1%',
+      changeType: 'positive',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+      )
+    },
+    {
+      title: 'Years to Retirement',
+      value: data.length > 0 ? `${data[0].Retirement_Age_Goal - data[0].Age || 'N/A'} years` : 'Loading...',
+      change: '-1 year',
+      changeType: 'neutral',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      )
+    }
+  ].map((kpi, index) => (
+    <div key={index} className={`rounded-2xl shadow-xl border transition-all duration-300 backdrop-blur-sm p-6 ${
+      isDark 
+        ? 'bg-gray-800 border-gray-700' 
+        : 'bg-white border-gray-100'
+    }`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-3 rounded-xl ${
+          isDark ? 'bg-gray-700' : 'bg-gradient-to-br from-blue-50 to-purple-50'
+        }`}>
+          <div className={`${
+            isDark ? 'text-blue-400' : 'text-blue-600'
+          }`}>
+            {kpi.icon}
+          </div>
+        </div>
+        <div className={`flex items-center space-x-1 text-sm px-2 py-1 rounded-full ${
+          kpi.changeType === 'positive' 
+            ? 'bg-green-100 text-green-800' 
+            : kpi.changeType === 'negative'
+            ? 'bg-red-100 text-red-800'
+            : 'bg-gray-100 text-gray-800'
+        }`}>
+          {kpi.changeType === 'positive' && (
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 17l9.2-9.2M17 17V7H7"/>
+            </svg>
+          )}
+          {kpi.changeType === 'negative' && (
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 7l-9.2 9.2M7 7v10h10"/>
+            </svg>
+          )}
+          <span className="font-medium">{kpi.change}</span>
+        </div>
+      </div>
+      <div>
+        <h3 className={`text-2xl font-bold mb-1 transition-colors duration-300 ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}>
+          {kpi.value}
+        </h3>
+        <p className={`text-sm font-medium transition-colors duration-300 ${
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        }`}>
+          {kpi.title}
+        </p>
+      </div>
+    </div>
+  ))}
+</div>
             
             {/* 4-Grid Chart Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1660,103 +1865,135 @@ if (config.xAxis === "DebtVsSavings") {
           {/* Export Options */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {[
-              {
-                title: 'PDF Report',
-                description: 'Generate comprehensive pension analysis reports',
-                format: 'PDF',
-                icon: (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                )
-              },
-              {
-                title: 'Excel Export',
-                description: 'Export data and charts to Excel format',
-                format: 'XLSX',
-                icon: (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                  </svg>
-                )
-              },
-              {
-                title: 'PowerPoint',
-                description: 'Create presentation-ready slides with charts',
-                format: 'PPTX',
-                icon: (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"/>
-                  </svg>
-                )
-              }
-            ].map((exportOption, index) => (
-              <div key={index} className={`p-6 rounded-2xl border transition-all duration-300 hover:shadow-lg ${
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-              }`}>
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 text-white">
-                  {exportOption.icon}
-                </div>
-                <h3 className={`text-lg font-semibold mb-2 transition-colors duration-300 ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>{exportOption.title}</h3>
-                <p className={`text-sm mb-4 transition-colors duration-300 ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>{exportOption.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs px-2 py-1 rounded-full transition-colors duration-300 ${
-                    isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-                  }`}>{exportOption.format}</span>
-                  <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 text-sm">
-                    Export
-                  </button>
-                </div>
-              </div>
-            ))}
+  {
+    title: 'PDF Report',
+    description: 'Generate comprehensive pension analysis reports',
+    format: 'PDF',
+    onClick: exportToPDF,
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+    )
+  },
+  {
+    title: 'Excel Export',
+    description: 'Export data and charts to Excel format',
+    format: 'XLSX',
+    onClick: exportToExcel,
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+    )
+  },
+  {
+    title: 'PowerPoint',
+    description: 'Create presentation-ready slides with charts',
+    format: 'PPTX',
+    onClick: exportToPowerPoint,
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"/>
+      </svg>
+    )
+  }
+].map((exportOption, index) => (
+  <div key={index} className={`p-6 rounded-2xl border transition-all duration-300 hover:shadow-lg ${
+    isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+  }`}>
+    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 text-white">
+      {exportOption.icon}
+    </div>
+    <h3 className={`text-lg font-semibold mb-2 transition-colors duration-300 ${
+      isDark ? 'text-white' : 'text-gray-900'
+    }`}>{exportOption.title}</h3>
+    <p className={`text-sm mb-4 transition-colors duration-300 ${
+      isDark ? 'text-gray-400' : 'text-gray-600'
+    }`}>{exportOption.description}</p>
+    <div className="flex items-center justify-between">
+      <span className={`text-xs px-2 py-1 rounded-full transition-colors duration-300 ${
+        isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+      }`}>{exportOption.format}</span>
+      <button 
+        onClick={exportOption.onClick}
+        className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 text-sm"
+      >
+        Export
+      </button>
+    </div>
+  </div>
+))}
           </div>
 
           {/* Export History */}
-          <div className={`rounded-2xl shadow-lg border p-6 backdrop-blur-sm transition-all duration-300 ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-          }`}>
-            <h3 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}>Export History</h3>
-            <div className="space-y-3">
-              {[
-                { name: 'Q4_2024_Pension_Report.pdf', date: '2024-12-15', size: '2.4 MB', status: 'completed' },
-                { name: 'Member_Analysis_Charts.xlsx', date: '2024-12-10', size: '1.8 MB', status: 'completed' },
-                { name: 'Board_Presentation.pptx', date: '2024-12-08', size: '5.2 MB', status: 'completed' }
-              ].map((file, index) => (
-                <div key={index} className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 ${
-                  isDark ? 'border-gray-600 bg-gray-700/30' : 'border-gray-200 bg-gray-50'
-                }`}>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className={`font-medium transition-colors duration-300 ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>{file.name}</h4>
-                      <p className={`text-sm transition-colors duration-300 ${
-                        isDark ? 'text-gray-400' : 'text-gray-500'
-                      }`}>{file.date} • {file.size}</p>
-                    </div>
-                  </div>
-                  <button className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
-                    isDark 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                      : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                  }`}>
-                    Download
-                  </button>
-                </div>
-              ))}
-            </div>
+<div
+  className={`rounded-2xl shadow-lg border p-6 backdrop-blur-sm transition-all duration-300 ${
+    isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
+  }`}
+>
+  <h3
+    className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
+      isDark ? "text-white" : "text-gray-900"
+    }`}
+  >
+    Export History
+  </h3>
+  <div className="space-y-3">
+    {exportHistory.map((file, index) => (
+      <div
+        key={index}
+        className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 ${
+          isDark ? "border-gray-600 bg-gray-700/30" : "border-gray-200 bg-gray-50"
+        }`}
+      >
+        <div className="flex items-center space-x-4">
+          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+            <svg
+              className="w-5 h-5 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
           </div>
+          <div>
+            <h4
+              className={`font-medium transition-colors duration-300 ${
+                isDark ? "text-white" : "text-gray-900"
+              }`}
+            >
+              {file.name}
+            </h4>
+            <p
+              className={`text-sm transition-colors duration-300 ${
+                isDark ? "text-gray-400" : "text-gray-500"
+              }`}
+            >
+              {file.date} • {file.size}
+            </p>
+          </div>
+        </div>
+        <button
+          className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
+            isDark
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+          }`}
+        >
+          Download
+        </button>
+      </div>
+    ))}
+  </div>
+</div>
+
         </div>
       </div>
     </div>
