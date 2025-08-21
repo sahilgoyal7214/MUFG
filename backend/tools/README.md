@@ -1,6 +1,6 @@
 # Development Tools
 
-This directory contains utility tools and debugging scripts for the MUFG Pension Insights Backend development.
+This directory contains utility tools and debugging scripts for the MUFG Pension Insights Backend development, including authentication, testing, and API validation tools.
 
 ## Available Tools
 
@@ -17,18 +17,24 @@ node tools/generate-fixed-test-token.js
 - Fixed expiration date for consistent testing
 - Regulator role with full permissions
 - Compatible with all test suites
+- Ready for Swagger UI authorization
 
 #### `generate-test-token.js`
-Generates dynamic JWT tokens for various testing scenarios.
+Generates dynamic JWT tokens for various testing scenarios and user roles.
 
 ```bash
-node tools/generate-test-token.js
+# Generate tokens for different roles
+node tools/generate-test-token.js regulator
+node tools/generate-test-token.js advisor
+node tools/generate-test-token.js member
 ```
 
 **Features:**
+- Support for all three user roles (regulator, advisor, member)
 - Configurable user roles and permissions
 - Custom expiration times
 - Multiple user scenarios
+- Role-specific permission sets
 
 #### `debug-token.js`
 Debugging utility for JWT token analysis and validation.

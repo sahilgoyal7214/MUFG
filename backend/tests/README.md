@@ -12,6 +12,10 @@ tests/
 ├── performance/          # Performance and stress testing
 │   └── stress-test-suite.js    # Load testing and performance metrics
 ├── unit/                 # Unit tests for individual components
+│   ├── services/         # Service layer unit tests
+│   │   ├── GraphInsightsService.test.js  # Graph analysis tests
+│   │   ├── ChatbotService.test.js        # Chatbot service tests
+│   │   └── AuditService.test.js          # Audit logging tests
 │   ├── test-auth.js      # Authentication unit tests
 │   └── test-db.js        # Database unit tests
 └── scripts/              # Test automation scripts
@@ -45,6 +49,11 @@ node tests/unit/test-auth.js
 
 # Run database tests
 node tests/unit/test-db.js
+
+# Run service-specific tests
+node tests/unit/services/GraphInsightsService.test.js
+node tests/unit/services/ChatbotService.test.js
+node tests/unit/services/AuditService.test.js
 ```
 
 ### Shell Scripts
@@ -76,11 +85,13 @@ chmod +x tests/scripts/test-chatbot-llm.sh
 - ✅ Authentication & Authorization
 - ✅ CRUD Operations (Pension Data)
 - ✅ AI Chatbot Integration
+- ✅ Graph Insights with LLaVA Vision Model
 - ✅ KPI Calculations
 - ✅ Analytics Dashboard
 - ✅ Audit Logging
 - ✅ Member Data Management
 - ✅ User Management
+- ✅ Image Processing & Base64 Handling
 
 ### Edge Cases Tested
 - ✅ Invalid authentication tokens

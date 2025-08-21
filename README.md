@@ -1,12 +1,13 @@
 # MUFG Pension Insights Platform
 
-A comprehensive backend API for pension data analysis, insights, and AI-powered guidance, built with Express.js and local LLM integration.
+A comprehensive backend API for pension data analysis, insights, AI-powered guidance, and visual graph analysis, built with Express.js and local LLM integration.
 
 ## 🚀 **Current Status: Production Ready**
 
 ✅ **Complete Backend API** with role-based access control  
 ✅ **Swagger/OpenAPI Documentation** at `/api-docs`  
 ✅ **Local LLM Integration** for AI-powered chatbot  
+✅ **Graph Analysis Service** using LLaVA vision model  
 ✅ **JWT Authentication** with test tokens  
 ✅ **Financial Calculation Engine** with custom functions  
 ✅ **Audit Logging System** for compliance  
@@ -33,13 +34,16 @@ mufg/
 │   │   │   ├── kpi.js                # Financial calculations
 │   │   │   ├── chatbot.js            # AI chatbot with LLM
 │   │   │   ├── analytics.js          # Business analytics
+│   │   │   ├── graph-insights.js     # Graph analysis with LLaVA
 │   │   │   └── logs.js               # Audit logging
 │   │   ├── controllers/              # Business logic
 │   │   │   ├── MemberDataController.js
-│   │   │   └── ChatbotController.js
+│   │   │   ├── ChatbotController.js
+│   │   │   └── GraphInsightsController.js  # Graph analysis
 │   │   ├── services/                 # Core services
 │   │   │   ├── ChatbotService.js     # LLM integration
 │   │   │   ├── KpiService.js         # Financial calculations
+│   │   │   ├── GraphInsightsService.js # Graph vision analysis
 │   │   │   └── AuditService.js       # Logging & compliance
 │   │   ├── middleware/               # Custom middleware
 │   │   │   └── auth.js              # JWT & role-based auth
@@ -149,9 +153,11 @@ node generate-test-token.js [regulator|advisor|member]  # Generate JWT tokens
 
 **AI & Analytics:**
 - Local LLM integration - Privacy-focused AI
+- LLaVA vision model - Graph and chart analysis
 - Custom financial calculation engine
 - Pension projection algorithms
 - Natural language processing
+- Image processing and analysis
 
 **Logging & Compliance:**
 - File-based audit logging
@@ -177,6 +183,10 @@ DATABASE_URL=postgresql://Easyml:mlops@124@mufg.postgres.database.azure.com:5432
 
 # Local LLM Integration (optional)
 LOCAL_LLM_URL=http://localhost:5000/chat
+
+# Graph Analysis with LLaVA
+GRAPH_LLM_URL=http://localhost:11434/api/generate
+GRAPH_LLM_MODEL=llava
 
 # File Upload & Logging
 MAX_FILE_SIZE=50MB
@@ -223,6 +233,12 @@ LOG_LEVEL=info
 - Context-aware responses with member data
 - Natural language pension advice
 
+### 📊 **Graph Insights** (AI-powered visual analysis)
+- `POST /api/graph-insights/analyze` - Analyze graphs and charts with LLaVA
+- Base64 image input for pension fund charts
+- AI-powered visual data interpretation
+- Financial metrics and trend analysis
+
 ### 📊 **Analytics** (Business intelligence)
 - `GET /api/analytics/dashboard` - Role-based analytics dashboard
 - System-wide metrics for regulators
@@ -266,16 +282,26 @@ curl -X POST -H "Authorization: Bearer [TOKEN]" \
      -H "Content-Type: application/json" \
      -d '{"message":"How should I plan for retirement?"}' \
      http://localhost:4000/api/chatbot/message
+
+# Test graph analysis
+curl -X POST -H "Authorization: Bearer [TOKEN]" \
+     -H "Content-Type: application/json" \
+     -d '{"base64Image":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgA...","context":{"type":"pension_fund"},"graphType":"performance"}' \
+     http://localhost:4000/api/graph-insights/analyze
 ```
 
 ## 🤖 **Local LLM Integration**
 
 ### Setup (Optional)
 ```bash
-# Option 1: Ollama
+# Option 1: Ollama with LLaVA for graph analysis
+ollama serve --host 0.0.0.0:11434
+ollama pull llava
+
+# Option 2: Ollama for chatbot
 ollama serve --host 0.0.0.0:5000
 
-# Option 2: LocalAI
+# Option 3: LocalAI
 docker run -p 5000:8080 localai/localai
 
 # Your LLM server should accept POST requests at /chat
@@ -285,6 +311,7 @@ docker run -p 5000:8080 localai/localai
 - **Privacy-focused**: All AI processing stays local
 - **Intelligent fallback**: Works without LLM server
 - **Context-aware**: Uses member data for personalized advice
+- **Graph analysis**: Visual interpretation of charts and graphs
 - **Response tracking**: Monitor AI vs structured responses
 
 ## 🔐 **Role-Based Access Control**
@@ -316,9 +343,11 @@ docker run -p 5000:8080 localai/localai
 
 ### ✅ **AI Integration**
 - Local LLM for enhanced chatbot responses
+- LLaVA vision model for graph analysis
 - Natural language pension guidance
 - Context-aware advice generation
 - Privacy-focused processing
+- Image processing and visual data interpretation
 
 ### ✅ **Monitoring & Compliance**
 - Structured audit logging
@@ -350,13 +379,16 @@ docker run -p 5000:8080 localai/localai
 2. **Member Data**: Test pension data retrieval and updates
 3. **KPI Calculations**: Test your financial calculation functions
 4. **Chatbot**: Test AI-powered pension guidance
-5. **Analytics**: Test role-based dashboard data
-6. **Audit Logs**: Test compliance monitoring (regulator access)
+5. **Graph Insights**: Test visual analysis of pension fund charts
+6. **Analytics**: Test role-based dashboard data
+7. **Audit Logs**: Test compliance monitoring (regulator access)
 
 ### ✅ **Optional: LLM Enhancement**
-1. Set up local LLM server at `localhost:5000/chat`
-2. Test enhanced chatbot responses
-3. Monitor response sources in server logs
+1. Set up local LLM server at `localhost:5000/chat` for chatbot
+2. Set up LLaVA model at `localhost:11434/api/generate` for graph analysis  
+3. Test enhanced chatbot responses
+4. Test graph analysis capabilities
+5. Monitor response sources in server logs
 
 ## 🐳 **Docker Support**
 

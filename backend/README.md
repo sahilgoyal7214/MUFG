@@ -1,6 +1,6 @@
 # MUFG Pension Insights Backend API
 
-## � NextAuth Integration
+## 🔗 NextAuth Integration
 
 **Important**: This backend integrates with NextAuth running on the frontend.
 
@@ -45,10 +45,12 @@ backend/
 │   │   ├── users.js              # User management routes
 │   │   ├── members.js            # Member data routes
 │   │   ├── chatbot.js            # Chatbot API routes
+│   │   ├── graph-insights.js     # Graph analysis routes
 │   │   └── analytics.js          # Analytics routes
 │   │
 │   ├── services/                  # Business logic
 │   │   ├── ChatbotService.js     # AI chatbot service
+│   │   ├── GraphInsightsService.js # Graph analysis with LLaVA
 │   │   ├── AuditService.js       # Audit logging service
 │   │   ├── AnalyticsService.js   # Data analytics service
 │   │   └── NotificationService.js # Notifications
@@ -97,7 +99,14 @@ backend/
 - Conversation history and intent recognition
 - Privacy-focused AI processing (local LLM support)
 
-### 4. **Member Data Management**
+### 4. **Graph Analysis with LLaVA**
+- AI-powered visual analysis of pension fund charts and graphs
+- Base64 image processing and temporary file management
+- Integration with LLaVA vision model via Ollama
+- Financial metrics extraction from visual data
+- Automated cleanup of temporary files
+
+### 5. **Member Data Management**
 - Secure data access
 - Role-based data filtering
 - Audit logging
@@ -144,6 +153,12 @@ backend/
 - `GET /api/chatbot/capabilities` - Get bot capabilities
 - `DELETE /api/chatbot/history` - Clear conversation history
 
+### Graph Insights
+- `POST /api/graph-insights/analyze` - Analyze graph/chart images with LLaVA
+- Accepts base64 encoded images
+- Returns AI-powered analysis of financial charts
+- Supports pension fund analytics and trend analysis
+
 ### Analytics
 - `GET /api/analytics/dashboard` - Get analytics dashboard
 - `GET /api/analytics/reports` - Generate reports
@@ -180,6 +195,10 @@ FRONTEND_URL=http://localhost:3000
 
 # Local LLM Integration (optional)
 LOCAL_LLM_URL=http://localhost:5000/chat
+
+# Graph Analysis with LLaVA
+GRAPH_LLM_URL=http://localhost:11434/api/generate
+GRAPH_LLM_MODEL=llava
 ```
 
 ## 🛡️ Security Implementation
