@@ -152,6 +152,30 @@ export class AuditService {
   }
 
   /**
+   * Log graph analysis events
+   */
+  static async logGraphAnalysis({ userId, graphType, analysisType, timestamp, insights }) {
+    try {
+      const auditLog = {
+        id: this.generateId(),
+        userId,
+        graphType,
+        analysisType,
+        insights,
+        timestamp: timestamp || new Date(),
+        type: 'GRAPH_ANALYSIS'
+      };
+
+      // Write to log file
+      await this.writeLogToFile(auditLog, 'GRAPH_ANALYSIS');
+      
+      return auditLog;
+    } catch (error) {
+      console.error('Error logging graph analysis:', error);
+    }
+  }
+
+  /**
    * Get audit logs with filtering
    */
   static async getAuditLogs({ 

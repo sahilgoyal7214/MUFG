@@ -23,6 +23,7 @@ import analyticsRoutes from './src/routes/analytics.js';
 import logsRoutes from './src/routes/logs.js';
 import kpiRoutes from './src/routes/kpi.js';
 import advisorRoutes from './src/routes/advisor.js';
+import graphInsightsRoutes from './src/routes/graph-insights.js';
 
 // Import services
 import { AuditService } from './src/services/AuditService.js';
@@ -158,6 +159,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/advisor', advisorRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/kpi', kpiRoutes);
+app.use('/api/graph-insights', graphInsightsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
