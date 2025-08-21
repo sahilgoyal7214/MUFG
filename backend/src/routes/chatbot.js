@@ -12,6 +12,7 @@ import express from 'express';
 import { ChatbotController } from '../controllers/ChatbotController.js';
 import { authenticateTest as authenticate, authorize, chatbotRateLimit } from '../middleware/auth-test.js';
 import { PERMISSIONS } from '../config/roles.js';
+import { validateChatbotRequest, handleRoleBasedAccess } from '../middleware/chatbot-validation.js';
 
 const router = express.Router();
 
@@ -87,6 +88,8 @@ router.use(chatbotRateLimit);
  */
 router.post('/message', 
   authorize([PERMISSIONS.CHATBOT_ACCESS]),
+  validateChatbotRequest,  // New middleware for request validation
+  handleRoleBasedAccess,   // New middleware for role-based access
   ChatbotController.processMessage
 );
 

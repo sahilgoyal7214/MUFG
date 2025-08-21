@@ -174,6 +174,63 @@ export class MemberData {
     }
   }
 
+  static async getRawMemberData(memberId) {
+    try {
+      // Query to get raw data from pension_data table for a specific member
+      const query = `
+        SELECT * FROM pension_data 
+        WHERE user_id = $1 
+        ORDER BY transaction_date DESC 
+        LIMIT 1`;
+      const result = await db.query(query, [memberId]);
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error getting raw member data:', error);
+      throw error;
+    }
+  }
+
+  static async getAggregatedData() {
+    try {
+      // Query to get aggregated statistics for all members
+      const query = `
+        SELECT 
+          COUNT(*) as total_members,
+          MIN(age) as min_age,
+          MAX(age) as max_age,
+          AVG(age) as avg_age,
+          MIN(annual_income) as min_income,
+          MAX(annual_income) as max_income,
+          AVG(annual_income) as avg_income,
+          MIN(current_savings) as min_savings,
+          MAX(current_savings) as max_savings,
+          AVG(current_savings) as avg_savings,
+          MIN(retirement_age_goal) as min_retirement_age,
+          MAX(retirement_age_goal) as max_retirement_age,
+          AVG(retirement_age_goal) as avg_retirement_age,
+          ARRAY_AGG(DISTINCT gender) as gender_distribution,
+          ARRAY_AGG(DISTINCT employment_status) as employment_status_distribution,
+          ARRAY_AGG(DISTINCT risk_tolerance) as risk_tolerance_distribution,
+          ARRAY_AGG(DISTINCT investment_type) as investment_type_distribution
+        FROM pension_data
+        WHERE transaction_date = (
+          SELECT MAX(transaction_date) 
+          FROM pension_data
+        )`;
+        
+      const result = await db.query(query);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error getting aggregated data:', error);
+      throw error;
+    }
+  }
+
   static async findAll(filters = {}) {
     try {
       let query = 'SELECT * FROM member_data WHERE 1=1';

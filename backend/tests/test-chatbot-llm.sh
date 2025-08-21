@@ -6,7 +6,7 @@
 echo "🤖 Testing MUFG Chatbot with Local LLM Integration"
 echo "=================================================="
 
-# First, test without authentication (should fail)
+# First, test withbackend/src/configout authentication (should fail)
 echo ""
 echo "1. Testing without authentication (should fail):"
 curl -s -X POST http://localhost:4000/api/chatbot/message \

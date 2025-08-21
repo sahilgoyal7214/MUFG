@@ -42,12 +42,23 @@ export class ChatbotController {
         memberData = await MemberData.findByMemberId(memberId);
       }
 
+      // Get the appropriate data context based on user role
+      let dataContext;
+      if (user.permissions.includes('advisor')) {
+        // For advisors, get aggregated data for all members
+        dataContext = await MemberData.getAggregatedData();
+      } else {
+        // For regular members, get their full individual data
+        dataContext = memberData;
+      }
+
       // Process the message through the chatbot service
       const response = await ChatbotService.processMessage({
         message,
         context,
         user,
-        memberData
+        memberData: dataContext,
+        isAdvisor: user.permissions.includes('advisor')
       });
 
       // Log the interaction for audit purposes
