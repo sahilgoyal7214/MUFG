@@ -145,6 +145,11 @@ const loadChartPreferences = () => {
 
 export default function AdvisorContent({ activeTab, isDark }) {
   const [clients, setClients] = useState([]);
+  
+  // Chart base64 storage state
+  const [chartBase64Data, setChartBase64Data] = useState(null);
+  const [isCapturingChart, setIsCapturingChart] = useState(false);
+  const [chartCaptureError, setChartCaptureError] = useState(null);
 
   // Enhanced chart builder state (from member)
   const [chartConfig, setChartConfig] = useState({
@@ -712,10 +717,146 @@ export default function AdvisorContent({ activeTab, isDark }) {
     setActiveDropdown(null);
   };
 
-  const handleViewAIInsights = (chartId) => {
+  const handleViewAIInsights = async (chartId) => {
     setActiveInsightChartId(chartId);
     setShowAIInsightsModal(true);
     setActiveDropdown(null);
+    
+    // Capture chart when AI insights is opened
+    await captureChartBase64(chartId);
+  };
+
+  // Enhanced chart base64 capture function
+  const captureChartBase64 = async (chartId) => {
+    setIsCapturingChart(true);
+    setChartCaptureError(null);
+    
+    try {
+      // Wait a moment for any DOM updates
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Find the chart div by targeting the Plotly chart container
+      const chartContainers = document.querySelectorAll('.js-plotly-plot');
+      
+      if (chartContainers.length === 0) {
+        throw new Error('No Plotly charts found on page');
+      }
+      
+      // For advisor, we'll try to capture the specific chart based on position
+      // Chart 1 = index 0, Chart 2 = index 1, etc.
+      const chartIndex = chartId - 1;
+      const targetChart = chartContainers[chartIndex];
+      
+      if (!targetChart) {
+        throw new Error(`Chart ${chartId} not found`);
+      }
+
+      // Use Plotly's toImage function to get high quality base64
+      const plotlyDiv = targetChart;
+      
+      if (!window.Plotly) {
+        throw new Error('Plotly is not loaded');
+      }
+
+      console.log(`Capturing chart ${chartId}...`);
+      
+      // Capture with high quality settings
+      const base64Image = await window.Plotly.toImage(plotlyDiv, {
+        format: 'png',
+        width: 1200,
+        height: 800,
+        scale: 2 // Higher resolution
+      });
+
+      // Clean the base64 data by removing the data URL prefix
+      const cleanBase64 = base64Image.replace(/^data:image\/[a-z]+;base64,/, '');
+      
+      setChartBase64Data({
+        chartId: chartId,
+        fullDataUrl: base64Image,
+        cleanBase64: cleanBase64,
+        timestamp: new Date().toISOString(),
+        chartConfig: gridCharts.find(c => c.id === chartId)
+      });
+
+      // Store globally for debugging
+      window.advisorChartBase64Data = {
+        chartId: chartId,
+        fullDataUrl: base64Image,
+        cleanBase64: cleanBase64,
+        timestamp: new Date().toISOString(),
+        chartConfig: gridCharts.find(c => c.id === chartId)
+      };
+
+      console.log('Chart captured successfully!', {
+        chartId,
+        fullDataUrlLength: base64Image.length,
+        cleanBase64Length: cleanBase64.length,
+        preview: cleanBase64.substring(0, 100) + '...'
+      });
+
+    } catch (error) {
+      console.error('Error capturing chart:', error);
+      setChartCaptureError(error.message);
+    } finally {
+      setIsCapturingChart(false);
+    }
+  };
+
+  // Function to download the captured chart
+  const downloadCapturedChart = () => {
+    if (!chartBase64Data) {
+      alert('No chart data captured yet');
+      return;
+    }
+
+    try {
+      // Create download link using the full data URL
+      const link = document.createElement('a');
+      link.href = chartBase64Data.fullDataUrl;
+      
+      const chart = gridCharts.find(c => c.id === chartBase64Data.chartId);
+      const filename = `advisor-chart-${chartBase64Data.chartId}-${chart?.xAxis || 'chart'}-vs-${chart?.yAxis || 'data'}.png`;
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      console.log('Chart download initiated');
+    } catch (error) {
+      console.error('Error downloading chart:', error);
+      alert('Error downloading chart: ' + error.message);
+    }
+  };
+
+  // Function to test base64 validity
+  const testBase64Image = () => {
+    if (!chartBase64Data) {
+      alert('No chart data captured yet');
+      return;
+    }
+
+    // Open image in new window to test
+    const testWindow = window.open('', '_blank');
+    testWindow.document.write(`
+      <html>
+        <head><title>Chart Test</title></head>
+        <body style="margin:0; background:#f0f0f0; display:flex; justify-content:center; align-items:center; min-height:100vh;">
+          <div style="text-align:center; padding:20px;">
+            <h2>Chart Capture Test</h2>
+            <p><strong>Chart ID:</strong> ${chartBase64Data.chartId}</p>
+            <p><strong>Timestamp:</strong> ${chartBase64Data.timestamp}</p>
+            <p><strong>Full Data URL Length:</strong> ${chartBase64Data.fullDataUrl.length} chars</p>
+            <p><strong>Clean Base64 Length:</strong> ${chartBase64Data.cleanBase64.length} chars</p>
+            <hr>
+            <img src="${chartBase64Data.fullDataUrl}" style="max-width:100%; border:2px solid #333; border-radius:8px;" />
+            <hr>
+            <textarea readonly style="width:100%; height:100px; margin-top:10px; font-family:monospace; font-size:10px;">Clean Base64 (first 500 chars): ${chartBase64Data.cleanBase64.substring(0, 500)}...</textarea>
+          </div>
+        </body>
+      </html>
+    `);
   };
 
   const handleSaveChart = () => {
@@ -930,12 +1071,13 @@ export default function AdvisorContent({ activeTab, isDark }) {
                             modeBarButtonsToRemove: ["sendDataToCloud"],
                             toImageButtonOptions: {
                               format: "png",
-                              filename: "chart",
+                              filename: `advisor-chart-${chart.id}`,
                               height: 800,
                               width: 1200,
-                              scale: 1
+                              scale: 2
                             }
                           }}
+                          divId={`advisor-chart-${chart.id}`}
                         />
                       </div>
                     </div>
@@ -996,9 +1138,26 @@ export default function AdvisorContent({ activeTab, isDark }) {
                       </svg>
                     </div>
                     <div>
-                      <h3 className={`text-xl font-bold transition-colors duration-300 ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>AI Insights</h3>
+                      <div className="flex items-center space-x-2">
+                        <h3 className={`text-xl font-bold transition-colors duration-300 ${
+                          isDark ? 'text-white' : 'text-gray-900'
+                        }`}>AI Insights</h3>
+                        {chartBase64Data && chartBase64Data.chartId === activeInsightChartId && (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                            Chart Captured
+                          </span>
+                        )}
+                        {isCapturingChart && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full animate-pulse">
+                            Capturing...
+                          </span>
+                        )}
+                        {chartCaptureError && (
+                          <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                            Capture Failed
+                          </span>
+                        )}
+                      </div>
                       {activeInsightChartId && (
                         <p className={`text-sm transition-colors duration-300 ${
                           isDark ? 'text-gray-400' : 'text-gray-600'
@@ -1096,15 +1255,82 @@ export default function AdvisorContent({ activeTab, isDark }) {
                     >
                       Close
                     </button>
-                    <button
-                      onClick={() => {
-                        console.log('Exporting insights...');
-                      }}
-                      className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
-                    >
-                      Export Insights
-                    </button>
+                    
+                    {/* Chart Capture Controls */}
+                    {chartBase64Data && chartBase64Data.chartId === activeInsightChartId ? (
+                      <div className="flex space-x-2 flex-1">
+                        <button
+                          onClick={downloadCapturedChart}
+                          className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                          </svg>
+                          <span>Download Chart</span>
+                        </button>
+                        <button
+                          onClick={testBase64Image}
+                          className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          </svg>
+                          <span>Test Image</span>
+                        </button>
+                        <button
+                          onClick={() => captureChartBase64(activeInsightChartId)}
+                          disabled={isCapturingChart}
+                          className="px-4 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl hover:from-orange-700 hover:to-red-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => captureChartBase64(activeInsightChartId)}
+                        disabled={isCapturingChart}
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                      >
+                        {isCapturingChart ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                            <span>Capturing Chart...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span>Capture Chart</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
+
+                  {/* Debug Info */}
+                  {chartBase64Data && chartBase64Data.chartId === activeInsightChartId && (
+                    <div className={`mt-4 p-3 rounded-lg border text-xs transition-all duration-300 ${
+                      isDark ? 'bg-gray-700/50 border-gray-600 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'
+                    }`}>
+                      <p><strong>Chart ID:</strong> {chartBase64Data.chartId}</p>
+                      <p><strong>Captured:</strong> {new Date(chartBase64Data.timestamp).toLocaleString()}</p>
+                      <p><strong>Full Data URL:</strong> {chartBase64Data.fullDataUrl.length} characters</p>
+                      <p><strong>Clean Base64:</strong> {chartBase64Data.cleanBase64.length} characters</p>
+                      <p><strong>Preview:</strong> {chartBase64Data.cleanBase64.substring(0, 50)}...</p>
+                      <p className="text-blue-600"><strong>Access in console:</strong> window.advisorChartBase64Data</p>
+                    </div>
+                  )}
+
+                  {chartCaptureError && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                      <p><strong>Capture Error:</strong> {chartCaptureError}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
