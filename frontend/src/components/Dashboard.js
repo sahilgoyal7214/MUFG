@@ -32,7 +32,6 @@ const userConfigs = {
     color: 'blue',
     navigation: [
       { id: 'memberCharts', label: 'Explore Charts', icon: 'chart' },
-      { id: 'memberAI', label: 'AI Assistant', icon: 'ai' },
       { id: 'memberExport', label: 'Export Report', icon: 'export' },
     ],
   },

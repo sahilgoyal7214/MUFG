@@ -1602,6 +1602,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark }) {
                 </div>
               ))}
             </div>
+            
           </div>
         </div>
       </div>
@@ -1610,6 +1611,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark }) {
   );
 
   // Main switch statement
+  const renderContent = () => {
   switch (activeTab) {
     case 'memberUpload':
       return renderUploadTab();
@@ -1623,3 +1625,9 @@ export default function MemberContent({ activeTab, isDark, onToggleDark }) {
       return renderUploadTab();
 }
 }
+return(
+  <div>
+    {renderContent()}
+    <ChatbotAssistant isDark={isDark} />
+  </div>
+)}
