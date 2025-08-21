@@ -2,7 +2,9 @@
   "name": "mufg-pension-insights",
   "version": "1.0.0",
   "description": "Pension Insights Platform - Frontend UI",
+  "description": "Pension Insights Platform - Backend API",
   "private": true,
+  "packageManager": "pnpm@8.0.0",
   "scripts": {
     "dev": "cd frontend && pnpm run dev",
     "build": "cd frontend && pnpm run build",
@@ -12,6 +14,13 @@
     "lint": "cd frontend && pnpm run lint",
     "test": "cd frontend && pnpm test",
     "install": "cd frontend && pnpm install"
+    "dev": "cd backend && pnpm run dev",
+    "build": "cd backend && pnpm run build",
+    "start": "cd backend && pnpm start",
+    "install:all": "cd backend && pnpm install",
+    "clean": "rm -rf backend/node_modules node_modules",
+    "lint": "cd backend && pnpm run lint",
+    "test": "cd backend && pnpm test"
   },
   "engines": {
     "node": ">=18.0.0",
