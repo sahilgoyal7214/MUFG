@@ -1,23 +1,54 @@
 #!/bin/bash
 
 # MUFG Project Development Launcher
-# Quick start script for development environment
+# Quick start script for both frontend and backend development servers
 
 echo "🚀 MUFG Pension Insights Platform - Development Launcher"
 echo "======================================================"
 
 # Navigate to project root
-cd /mnt/Project/Projects/mufg/backend
+PROJECT_ROOT="/mnt/Project/Projects/MUFG"
+cd "$PROJECT_ROOT"
 
-# Check if dependencies are installed
-if [ ! -d "node_modules" ]; then
-    echo "📦 Installing dependencies..."
-    pnpm install
-fi
+# Function to kill background processes on exit
+cleanup() {
+    echo ""
+    echo "🛑 Shutting down servers..."
+    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
+    exit 0
+}
+
+# Set up trap for cleanup on script exit
+trap cleanup SIGINT SIGTERM
 
 echo ""
-echo "🌟 Available Commands:"
-echo "  1. start     - Start development server with nodemon"
+echo "📋 Frontend will be available at: http://localhost:3000"
+echo "📋 Backend API will be available at: http://localhost:4000"
+echo "� API Documentation: http://localhost:4000/api-docs"
+echo ""
+
+# Start backend server in background
+echo "🚀 Starting Backend API Server..."
+cd "$PROJECT_ROOT/backend" && pnpm run dev &
+BACKEND_PID=$!
+
+# Wait a moment for backend to start
+sleep 3
+
+# Start frontend server in background
+echo "� Starting Frontend Development Server..."
+cd "$PROJECT_ROOT/frontend" && pnpm run dev &
+FRONTEND_PID=$!
+
+# Wait for both processes
+echo ""
+echo "✅ Both servers are starting..."
+echo "🔄 Watching for changes..."
+echo ""
+echo "Press Ctrl+C to stop both servers"
+
+# Wait for background processes
+wait $BACKEND_PID $FRONTEND_PID
 echo "  2. test      - Run test suite"
 echo "  3. docs      - Open API documentation"
 echo "  4. logs      - View recent logs"

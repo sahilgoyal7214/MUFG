@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
+import AuthService from '../lib/authService';
 
 export default function LoginForm({ selectedRole, onLogin, onBack }) {
   const [username, setUsername] = useState('');
@@ -50,36 +51,60 @@ export default function LoginForm({ selectedRole, onLogin, onBack }) {
     setIsLoading(true);
 
     try {
-      // Try NextAuth login first
-      const result = await signIn('credentials', {
-        redirect: false,
-        username,
-        password,
-        role: selectedRole,
-      });
+      // Try backend API login first
+      const backendResponse = await AuthService.login(username, password, selectedRole);
+      
+      if (backendResponse.token) {
+        // Backend login successful, now try NextAuth
+        const result = await signIn('credentials', {
+          redirect: false,
+          username,
+          password,
+          role: selectedRole,
+        });
 
-      if (result?.ok) {
-        // NextAuth login successful - session will be handled by parent component
-        // Don't call onLogin here, let useSession in parent handle it
-      } else if (result?.error) {
-        // NextAuth failed, try legacy validation as fallback
+        if (result?.ok) {
+          // Both backend and NextAuth successful
+          console.log('Login successful with both backend and NextAuth');
+        } else {
+          // Backend worked but NextAuth failed - still proceed with backend auth
+          console.log('Backend login successful, NextAuth failed - proceeding with backend auth');
+          onLogin(selectedRole, username);
+        }
+      }
+    } catch (backendError) {
+      console.error('Backend login failed:', backendError);
+      
+      // Fallback to NextAuth only
+      try {
+        const result = await signIn('credentials', {
+          redirect: false,
+          username,
+          password,
+          role: selectedRole,
+        });
+
+        if (result?.ok) {
+          console.log('NextAuth login successful');
+        } else if (result?.error) {
+          // Both backend and NextAuth failed, try legacy validation
+          const validCredentials = demoCredentials[selectedRole];
+          
+          if (username === validCredentials.username && password === validCredentials.password) {
+            onLogin(selectedRole, username);
+          } else {
+            setError('Invalid username or password. Please try again.');
+          }
+        }
+      } catch (nextAuthError) {
+        // All methods failed, try legacy validation as final fallback
         const validCredentials = demoCredentials[selectedRole];
         
         if (username === validCredentials.username && password === validCredentials.password) {
-          // Legacy login successful
           onLogin(selectedRole, username);
         } else {
-          setError('Invalid username or password. Please try again.');
+          setError('Authentication failed. Please check your credentials and try again.');
         }
-      }
-    } catch (error) {
-      // If NextAuth fails completely, try legacy validation
-      const validCredentials = demoCredentials[selectedRole];
-      
-      if (username === validCredentials.username && password === validCredentials.password) {
-        onLogin(selectedRole, username);
-      } else {
-        setError('Invalid username or password. Please try again.');
       }
     } finally {
       setIsLoading(false);

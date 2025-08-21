@@ -1,7 +1,7 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { userService } from "@/lib/userService"
-import initializeDatabase from "@/lib/initDb"
+import { userService } from "../../../../lib/userService"
+import initializeDatabase from "../../../../lib/initDb"
 
 // Initialize database on startup
 let dbInitialized = false;
@@ -83,6 +83,8 @@ const handler = NextAuth({
         session.user.role = token.role
         session.user.username = token.username
         session.user.roleData = token.roleData
+        // Add the JWT token to session for backend API calls
+        session.accessToken = token
       }
       return session
     },

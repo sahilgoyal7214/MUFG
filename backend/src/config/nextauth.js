@@ -49,8 +49,10 @@ export const extractUserFromToken = async (token) => {
     id: decoded.sub,
     email: decoded.email,
     name: decoded.name,
+    username: decoded.username,
     role: decoded.role,
-    memberId: decoded.memberId,
+    roleData: decoded.roleData,
+    memberId: decoded.memberId || decoded.sub,
     permissions: decoded.permissions || []
   };
 };

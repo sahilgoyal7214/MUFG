@@ -64,11 +64,12 @@ const userConfigs = {
 
 
 // Mock Content Components
-export default function Dashboard({ currentUser = 'member', username = 'Demo User', onLogout = () => { } }) {
+export default function Dashboard({ currentUser = 'member', username = 'Demo User', onLogout = () => { }, onRoleSwitch = () => { } }) {
   const [activeTab, setActiveTab] = useState('');
   const [isDark, setIsDark] = useState(false);
   const [userToggled, setUserToggled] = useState(false);
   const [isThemeLoaded, setIsThemeLoaded] = useState(false);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   const config = userConfigs[currentUser];
   const themeColors = colorMap[config.color];
@@ -116,6 +117,18 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
     darkModeMedia.addEventListener('change', handleChange);
     return () => darkModeMedia.removeEventListener('change', handleChange);
   }, [userToggled, isThemeLoaded]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showRoleDropdown && !event.target.closest('.role-dropdown')) {
+        setShowRoleDropdown(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showRoleDropdown]);
 
   // Set default tab and load from localStorage
   useEffect(() => {
@@ -176,6 +189,53 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
         </div>
 
         <div className="flex items-center space-x-4">
+          {/* Role Switcher */}
+          <div className="relative role-dropdown">
+            <button
+              onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 ${isDark
+                ? 'bg-gray-700 text-white hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-lg'
+                }`}
+            >
+              <div className={`w-3 h-3 rounded-full ${themeColors.bg600}`}></div>
+              <span className="text-sm font-medium capitalize">{currentUser}</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showRoleDropdown && (
+              <div className={`absolute right-0 top-full mt-2 w-48 rounded-xl shadow-xl border z-50 ${isDark
+                ? 'bg-gray-800 border-gray-600'
+                : 'bg-white border-gray-200'
+                }`}>
+                {Object.entries(userConfigs).map(([role, roleConfig]) => (
+                  <button
+                    key={role}
+                    onClick={() => {
+                      onRoleSwitch(role);
+                      setShowRoleDropdown(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left flex items-center space-x-3 transition-colors duration-200 first:rounded-t-xl last:rounded-b-xl ${
+                      currentUser === role
+                        ? `${colorMap[roleConfig.color].bg100} ${colorMap[roleConfig.color].text600}`
+                        : isDark
+                        ? 'hover:bg-gray-700 text-gray-300'
+                        : 'hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 rounded-full ${colorMap[roleConfig.color].bg600}`}></div>
+                    <div>
+                      <div className="font-medium capitalize">{role}</div>
+                      <div className="text-xs opacity-75">{roleConfig.name}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Dark Mode Toggle */}
           <button
             onClick={toggleTheme}

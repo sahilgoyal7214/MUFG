@@ -1,4 +1,4 @@
-import pool from '@/lib/db'
+import pool from './db'
 import bcrypt from 'bcryptjs'
 
 export const userService = {

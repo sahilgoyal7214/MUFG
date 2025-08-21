@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { usePensionData, useUserProfile } from '../../lib/hooks';
+import DataService from '../../lib/dataService';
+import ChatbotService from '../../lib/chatbotService';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -28,11 +31,66 @@ const loadChartPreferences = () => {
   return null;
 };
 
+// Generate mock pension data for fallback
+const generateMockPensionData = () => {
+  const mockData = [];
+  for (let i = 0; i < 100; i++) {
+    mockData.push({
+      User_ID: `U${String(i + 1).padStart(3, '0')}`,
+      Age: 25 + Math.floor(Math.random() * 40),
+      Gender: Math.random() > 0.5 ? 'Male' : 'Female',
+      Country: ['UK', 'US', 'Canada', 'Australia'][Math.floor(Math.random() * 4)],
+      Annual_Income: 30000 + Math.floor(Math.random() * 100000),
+      Current_Savings: Math.floor(Math.random() * 500000),
+      Contribution_Amount: 200 + Math.floor(Math.random() * 1000),
+      Projected_Pension_Amount: 100000 + Math.floor(Math.random() * 2000000),
+      Years_Contributed: Math.floor(Math.random() * 30),
+      Annual_Return_Rate: 3 + Math.random() * 8,
+      Retirement_Age_Goal: 60 + Math.floor(Math.random() * 10),
+      Employer_Contribution: Math.floor(Math.random() * 500),
+      Total_Annual_Contribution: Math.floor(Math.random() * 10000),
+      ProjectionTimeline: Array.from({ length: 10 }, (_, idx) => 2024 + idx),
+      Savings: Array.from({ length: 10 }, (_, idx) => 50000 + (idx * 15000) + Math.random() * 10000)
+    });
+  }
+  return mockData;
+};
+
 export default function MemberContent({ activeTab, isDark, onToggleDark, currentUserId }) {
-  // State for loaded data
+  // Use backend data hooks
+  const { data: backendData, loading: backendLoading, error: backendError, refetch } = usePensionData();
+  const { profile, stats } = useUserProfile();
+
+  // State for loaded data (fallback to mock data if backend fails)
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Use backend data when available, fallback to mock data
+  useEffect(() => {
+    if (backendData && backendData.length > 0) {
+      setData(backendData);
+      setLoading(false);
+      setError(null);
+    } else if (backendError) {
+      // Fallback to mock data if backend fails
+      console.warn('Backend data failed, using mock data:', backendError);
+      loadMockData();
+    } else if (!backendLoading) {
+      // Backend returned empty data, use mock data
+      loadMockData();
+    }
+  }, [backendData, backendLoading, backendError]);
+
+  // Mock data loader (existing implementation)
+  const loadMockData = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setData(generateMockPensionData());
+      setLoading(false);
+      setError(null);
+    }, 1000);
+  };
 
   // Chart base64 storage state
   const [chartBase64Data, setChartBase64Data] = useState(null);
