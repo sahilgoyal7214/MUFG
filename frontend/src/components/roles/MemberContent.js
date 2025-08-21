@@ -5,6 +5,27 @@ import dynamic from 'next/dynamic';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
+// Chart preferences utilities
+const saveChartPreferences = (charts) => {
+  try {
+    localStorage.setItem('member-chart-preferences', JSON.stringify(charts));
+  } catch (error) {
+    console.warn('Failed to save chart preferences:', error);
+  }
+};
+
+const loadChartPreferences = () => {
+  try {
+    const saved = localStorage.getItem('member-chart-preferences');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.warn('Failed to load chart preferences:', error);
+  }
+  return null;
+};
+
 export default function MemberContent({ activeTab, isDark, onToggleDark,currentUserId }) {
   // State for loaded data
   const [data, setData] = useState([]);
@@ -19,11 +40,13 @@ const [chartConfig, setChartConfig] = useState({
   showInsights: true
 });
 
-;
-
-
   // State for managing multiple charts in the grid
-  const [gridCharts, setGridCharts] = useState([
+  const [gridCharts, setGridCharts] = useState(() => {
+    const savedCharts = loadChartPreferences();
+    if (savedCharts && savedCharts.length > 0) {
+      return savedCharts;
+    }
+    return [
   { 
     id: 1,
     xAxis: "ProjectionTimeline",  // 👈 use timeline
@@ -39,7 +62,8 @@ const [chartConfig, setChartConfig] = useState({
     }
   },
   { id: 2, isConfigured: false }
-]);
+    ];
+  });
 
 
   // State for chart configuration modal
@@ -477,6 +501,9 @@ if (config.xAxis === "DebtVsSavings") {
         updated.push({ id: updated.length + 1, isConfigured: false });
       }
 
+      // Save to localStorage
+      saveChartPreferences(updated);
+
       return updated;
     });
 
@@ -493,6 +520,10 @@ if (config.xAxis === "DebtVsSavings") {
         ...chart,
         id: index + 1
       }));
+      
+      // Save to localStorage
+      saveChartPreferences(reIndexed);
+      
       return reIndexed;
     });
     setActiveDropdown(null);

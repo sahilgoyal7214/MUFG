@@ -2,11 +2,10 @@
 import dynamic from 'next/dynamic';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
-const isDark = typeof document !== 'undefined' && document.body.classList.contains('dark');
 
 import { useEffect, useState } from 'react';
 
-function ChatbotAssistant() {
+function ChatbotAssistant({ isDark }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     { from: 'bot', text: 'Hi! How can I assist you today?' }
@@ -123,6 +122,27 @@ function parseCSV(text) {
   });
 }
 
+// Chart preferences utilities
+const saveChartPreferences = (charts) => {
+  try {
+    localStorage.setItem('advisor-chart-preferences', JSON.stringify(charts));
+  } catch (error) {
+    console.warn('Failed to save chart preferences:', error);
+  }
+};
+
+const loadChartPreferences = () => {
+  try {
+    const saved = localStorage.getItem('advisor-chart-preferences');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.warn('Failed to load chart preferences:', error);
+  }
+  return null;
+};
+
 export default function AdvisorContent({ activeTab, isDark }) {
   const [clients, setClients] = useState([]);
 
@@ -133,23 +153,32 @@ export default function AdvisorContent({ activeTab, isDark }) {
     chartType: 'scatter'
   });
 
-  const [gridCharts, setGridCharts] = useState([
-    {
-      id: 1,
-      xAxis: 'Age',
-      yAxis: 'Current_Savings',
-      chartType: 'scatter',
-      isConfigured: true,
-      colorScheme: 'default',
-      showInsights: true,
-      customColors: {
-        primary: '#3b82f6',
-        secondary: '#8b5cf6',
-        accent: '#06d6a0'
-      }
-    },
-    { id: 2, isConfigured: false }
-  ]);
+  const [gridCharts, setGridCharts] = useState(() => {
+    // Try to load from localStorage first
+    const savedCharts = loadChartPreferences();
+    if (savedCharts && savedCharts.length > 0) {
+      return savedCharts;
+    }
+    
+    // Default charts if nothing saved
+    return [
+      {
+        id: 1,
+        xAxis: 'Age',
+        yAxis: 'Current_Savings',
+        chartType: 'scatter',
+        isConfigured: true,
+        colorScheme: 'default',
+        showInsights: true,
+        customColors: {
+          primary: '#3b82f6',
+          secondary: '#8b5cf6',
+          accent: '#06d6a0'
+        }
+      },
+      { id: 2, isConfigured: false }
+    ];
+  });
 
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
@@ -231,9 +260,9 @@ export default function AdvisorContent({ activeTab, isDark }) {
         {/* Client List - now uses dummy dataset */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Client Overview</h3>
+            <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>Client Overview</h3>
             <div className="flex space-x-2">
-              <input type="text" placeholder="Search clients..." className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              <input type="text" placeholder="Search clients..." className={`border border-gray-300 rounded-lg px-3 py-2 text-sm ${isDark ? "text-white" : "bg-white text-gray-900"}`} />
               <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
                 Add Client
               </button>
@@ -703,6 +732,9 @@ export default function AdvisorContent({ activeTab, isDark }) {
         updated.push({ id: updated.length + 1, isConfigured: false });
       }
 
+      // Save to localStorage
+      saveChartPreferences(updated);
+
       return updated;
     });
 
@@ -718,6 +750,10 @@ export default function AdvisorContent({ activeTab, isDark }) {
         ...chart,
         id: index + 1
       }));
+      
+      // Save to localStorage
+      saveChartPreferences(reIndexed);
+      
       return reIndexed;
     });
     setActiveDropdown(null);
@@ -1492,7 +1528,7 @@ export default function AdvisorContent({ activeTab, isDark }) {
   return (
     <>
       {renderContent()}
-      <ChatbotAssistant />
+      <ChatbotAssistant isDark={isDark} />
     </>
   );
 }

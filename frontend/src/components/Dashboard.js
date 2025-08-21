@@ -69,28 +69,45 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
   const [activeTab, setActiveTab] = useState('');
   const [isDark, setIsDark] = useState(false);
   const [userToggled, setUserToggled] = useState(false);
-  const [themePreference, setThemePreference] = useState(null); // Store user preference in memory
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
   const config = userConfigs[currentUser];
   const themeColors = colorMap[config.color];
 
-  // Initialize theme based on system preference
+  // Initialize theme from localStorage or system preference
   useEffect(() => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setIsDark(prefersDark);
+    const storedTheme = localStorage.getItem('theme-preference');
+    const storedUserToggled = localStorage.getItem('user-toggled-theme');
+    
+    if (storedTheme) {
+      // User has a saved preference
+      setIsDark(storedTheme === 'dark');
+      setUserToggled(storedUserToggled === 'true');
+    } else {
+      // No saved preference, use system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDark(prefersDark);
+    }
+    setIsThemeLoaded(true);
   }, []);
 
   // Apply dark class to document
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (isThemeLoaded) {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
+      }
     }
-  }, [isDark]);
+  }, [isDark, isThemeLoaded]);
 
   // Watch for system theme changes (only if user hasn't manually toggled)
   useEffect(() => {
+    if (!isThemeLoaded) return;
+    
     const darkModeMedia = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => {
       if (!userToggled) {
@@ -99,20 +116,35 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
     };
     darkModeMedia.addEventListener('change', handleChange);
     return () => darkModeMedia.removeEventListener('change', handleChange);
-  }, [userToggled]);
+  }, [userToggled, isThemeLoaded]);
 
-  // Set default tab
+  // Set default tab and load from localStorage
   useEffect(() => {
     if (config && config.navigation.length > 0) {
-      setActiveTab(config.navigation[0].id);
+      // Try to load saved tab for this user role
+      const savedTab = localStorage.getItem(`active-tab-${currentUser}`);
+      if (savedTab && config.navigation.some(nav => nav.id === savedTab)) {
+        setActiveTab(savedTab);
+      } else {
+        setActiveTab(config.navigation[0].id);
+      }
     }
-  }, [config]);
+  }, [config, currentUser]);
 
   const toggleTheme = () => {
-    setUserToggled(true);
     const newTheme = !isDark;
+    setUserToggled(true);
     setIsDark(newTheme);
-    setThemePreference(newTheme ? 'dark' : 'light');
+    
+    // Save preferences to localStorage
+    localStorage.setItem('theme-preference', newTheme ? 'dark' : 'light');
+    localStorage.setItem('user-toggled-theme', 'true');
+  };
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    // Save active tab for this user role
+    localStorage.setItem(`active-tab-${currentUser}`, tabId);
   };
 
   const renderContent = () => {
@@ -225,7 +257,7 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
 
       {/* Body */}
       <div className="flex flex-1">
-        <Navigation config={config} activeTab={activeTab} onTabChange={setActiveTab} />
+        <Navigation config={config} activeTab={activeTab} onTabChange={handleTabChange} />
         <main className="flex-1 overflow-auto p-4 bg-white dark:bg-gray-900">{renderContent()}</main>
       </div>
     </div>
