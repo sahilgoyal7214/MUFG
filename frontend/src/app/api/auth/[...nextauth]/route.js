@@ -1,54 +1,21 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { userService } from "@/lib/userService"
+import initializeDatabase from "@/lib/initDb"
 
-// Mock user database - in production, replace with real database
-const users = [
-  {
-    id: "1",
-    username: "member1",
-    email: "member1@mufg.com",
-    password: "password123", // In production, this would be hashed
-    role: "member",
-    name: "John Member",
-    memberData: {
-      memberId: "M001",
-      age: 34,
-      salary: 65000,
-      contribution: 520,
-      balance: 45200,
-      riskLevel: "Medium",
-      employment: "Full-time"
-    }
-  },
-  {
-    id: "2",
-    username: "advisor1", 
-    email: "advisor1@mufg.com",
-    password: "password123",
-    role: "advisor",
-    name: "Jane Advisor",
-    advisorData: {
-      totalClients: 247,
-      assetsUnderManagement: 45200000,
-      avgPerformance: 7.8,
-      clientsNeedingReview: 18
-    }
-  },
-  {
-    id: "3",
-    username: "regulator1",
-    email: "regulator1@mufg.com", 
-    password: "password123",
-    role: "regulator",
-    name: "Robert Regulator",
-    regulatorData: {
-      totalSchemes: 1247,
-      complianceRate: 94.2,
-      pendingReviews: 73,
-      riskAlerts: 12
+// Initialize database on startup
+let dbInitialized = false;
+async function ensureDbInitialized() {
+  if (!dbInitialized) {
+    try {
+      await initializeDatabase();
+      await userService.initializeDefaultUsers();
+      dbInitialized = true;
+    } catch (error) {
+      console.error('Failed to initialize database:', error);
     }
   }
-]
+}
 
 const handler = NextAuth({
   providers: [
@@ -64,25 +31,34 @@ const handler = NextAuth({
           return null
         }
 
-        // Find user by username
-        const user = users.find(
-          u => u.username === credentials.username && u.password === credentials.password
-        )
+        try {
+          // Ensure database is initialized
+          await ensureDbInitialized();
 
-        if (!user) {
-          return null
-        }
+          // Find user by username
+          const user = await userService.getUserByUsername(credentials.username);
+          if (!user) {
+            return null;
+          }
 
-        // Return user object (password will be excluded)
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          username: user.username,
-          role: user.role,
-          memberData: user.memberData,
-          advisorData: user.advisorData,
-          regulatorData: user.regulatorData,
+          // Verify password
+          const isPasswordValid = await userService.verifyPassword(credentials.password, user.password);
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          // Return user object (password will be excluded)
+          return {
+            id: user.id.toString(),
+            email: user.email,
+            name: user.full_name,
+            username: user.username,
+            role: user.role,
+            roleData: user.role_data
+          }
+        } catch (error) {
+          console.error('Authentication error:', error);
+          return null;
         }
       }
     })
@@ -96,9 +72,7 @@ const handler = NextAuth({
       if (user) {
         token.role = user.role
         token.username = user.username
-        token.memberData = user.memberData
-        token.advisorData = user.advisorData
-        token.regulatorData = user.regulatorData
+        token.roleData = user.roleData
       }
       return token
     },
@@ -108,9 +82,7 @@ const handler = NextAuth({
         session.user.id = token.sub
         session.user.role = token.role
         session.user.username = token.username
-        session.user.memberData = token.memberData
-        session.user.advisorData = token.advisorData
-        session.user.regulatorData = token.regulatorData
+        session.user.roleData = token.roleData
       }
       return session
     },
