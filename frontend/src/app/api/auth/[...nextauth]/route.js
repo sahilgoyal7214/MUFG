@@ -17,7 +17,7 @@ async function ensureDbInitialized() {
   }
 }
 
-const handler = NextAuth({
+const authOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -83,8 +83,16 @@ const handler = NextAuth({
         session.user.role = token.role
         session.user.username = token.username
         session.user.roleData = token.roleData
-        // Add the JWT token to session for backend API calls
-        session.accessToken = token
+        
+        // Store the raw token data for frontend to create JWT
+        session.tokenData = {
+          sub: token.sub,
+          email: token.email,
+          name: token.name,
+          username: token.username,
+          role: token.role,
+          roleData: token.roleData
+        };
       }
       return session
     },
@@ -94,6 +102,8 @@ const handler = NextAuth({
     error: '/auth/error',
   },
   secret: process.env.NEXTAUTH_SECRET,
-})
+};
 
-export { handler as GET, handler as POST }
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST, authOptions }

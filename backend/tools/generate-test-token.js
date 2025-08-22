@@ -21,14 +21,14 @@ const testUsers = {
     role: 'REGULATOR',
     name: 'John Regulator',
     permissions: [
-      'USER_READ_ALL', 
-      'ANALYTICS_READ',
-      'ANALYTICS_VIEW_ALL', 
-      'AUDIT_LOGS', 
-      'MEMBER_DATA_READ_ALL',
-      'MEMBER_DATA_CREATE',
-      'MEMBER_DATA_UPDATE', 
-      'MEMBER_DATA_DELETE'
+      'user:read:all', 
+      'analytics:read',
+      'analytics:view:all', 
+      'audit:logs', 
+      'member_data:read:all',
+      'member_data:create',
+      'member_data:update', 
+      'member_data:delete'
     ]
   },
   advisor: {
@@ -36,14 +36,21 @@ const testUsers = {
     email: 'advisor@mufg.com',
     role: 'ADVISOR',
     name: 'Jane Advisor',
-    permissions: ['USER_READ_ASSIGNED', 'ANALYTICS_VIEW_ASSIGNED', 'MEMBER_DATA_READ_ASSIGNED']
+    permissions: ['user:read', 'user:read:assigned', 'analytics:view:assigned', 'member_data:read:assigned']
   },
   member: {
-    id: 'MEM001',
+    id: 'U1499',
     email: 'member@mufg.com', 
     role: 'MEMBER',
     name: 'Bob Member',
-    permissions: ['ANALYTICS_VIEW_OWN', 'MEMBER_DATA_READ_OWN', 'CHATBOT_ACCESS']
+    permissions: [
+      'member_data:read:own',
+      'member_data:update:own', 
+      'analytics:view:own',
+      'chatbot:access',
+      'ai:insights:personal',
+      'user:read'
+    ]
   }
 };
 

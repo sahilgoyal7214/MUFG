@@ -9,7 +9,7 @@
  */
 
 import express from 'express';
-import { authenticateTest as authenticate, authorize } from '../middleware/auth-test.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 import { PERMISSIONS } from '../config/roles.js';
 import KpiService from '../services/KpiService.js';
 

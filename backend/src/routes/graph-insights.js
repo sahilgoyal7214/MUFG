@@ -34,7 +34,7 @@
 
 import express from 'express';
 import { GraphInsightsController } from '../controllers/GraphInsightsController.js';
-import { authenticateTest as authenticate, authorize } from '../middleware/auth-test.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 import { PERMISSIONS } from '../config/roles.js';
 
 const router = express.Router();
@@ -81,7 +81,7 @@ router.use(authenticate);
  *                       description: AI-generated analysis of the graph
  */
 router.post('/analyze',
-  authorize([PERMISSIONS.ANALYTICS_READ]),
+  authorize([PERMISSIONS.AI_INSIGHTS_PERSONAL]),
   GraphInsightsController.analyzeGraph
 );
 

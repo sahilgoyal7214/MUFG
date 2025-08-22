@@ -71,18 +71,25 @@ export class ChatbotService {
   /**
    * Analyze graph/chart with AI
    * @param {string} imageBase64 - Base64 encoded image
-   * @param {string} prompt - Analysis prompt
+   * @param {object} context - Analysis context
    * @returns {Promise} AI analysis
    */
-  static async analyzeGraph(imageBase64, prompt = '') {
+  static async analyzeGraph(imageBase64, context = {}) {
+    console.log('🎯 ChatbotService.analyzeGraph called');
+    console.log('🖼️ Image length:', imageBase64?.length || 0);
+    console.log('📊 Context:', context);
+    
     try {
+      console.log('🚀 Making API call to /graph-insights/analyze');
       const response = await api.post('/graph-insights/analyze', {
-        image: imageBase64,
-        prompt: prompt || 'Please analyze this pension data chart and provide insights.'
+        base64Image: imageBase64,
+        context: context,
+        graphType: context.chartType || 'general'
       });
+      console.log('✅ API response received:', response);
       return response;
     } catch (error) {
-      console.error('Failed to analyze graph:', error);
+      console.error('❌ Failed to analyze graph:', error);
       throw error;
     }
   }

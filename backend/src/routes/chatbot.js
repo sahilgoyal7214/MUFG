@@ -10,7 +10,8 @@
 
 import express from 'express';
 import { ChatbotController } from '../controllers/ChatbotController.js';
-import { authenticateTest as authenticate, authorize, chatbotRateLimit } from '../middleware/auth-test.js';
+import { authenticate, authorize, chatbotRateLimit } from '../middleware/auth.js';
+import { ChatbotService } from '../services/ChatbotService.js';
 import { PERMISSIONS } from '../config/roles.js';
 import { validateChatbotRequest, handleRoleBasedAccess } from '../middleware/chatbot-validation.js';
 

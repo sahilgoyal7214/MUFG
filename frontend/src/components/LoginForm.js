@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import AuthService from '../lib/authService';
 
 export default function LoginForm({ selectedRole, onLogin, onBack }) {
   const [username, setUsername] = useState('');
@@ -11,13 +10,6 @@ export default function LoginForm({ selectedRole, onLogin, onBack }) {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Demo credentials for each role
-  const demoCredentials = {
-    member: { username: 'member1', password: 'password123' },
-    advisor: { username: 'advisor1', password: 'password123' },
-    regulator: { username: 'regulator1', password: 'password123' }
-  };
 
   const roleConfig = {
     member: {
@@ -51,70 +43,27 @@ export default function LoginForm({ selectedRole, onLogin, onBack }) {
     setIsLoading(true);
 
     try {
-      // Try backend API login first
-      const backendResponse = await AuthService.login(username, password, selectedRole);
-      
-      if (backendResponse.token) {
-        // Backend login successful, now try NextAuth
-        const result = await signIn('credentials', {
-          redirect: false,
-          username,
-          password,
-          role: selectedRole,
-        });
+      // Try NextAuth login
+      const result = await signIn('credentials', {
+        redirect: false,
+        username,
+        password,
+        role: selectedRole,
+      });
 
-        if (result?.ok) {
-          // Both backend and NextAuth successful
-          console.log('Login successful with both backend and NextAuth');
-        } else {
-          // Backend worked but NextAuth failed - still proceed with backend auth
-          console.log('Backend login successful, NextAuth failed - proceeding with backend auth');
-          onLogin(selectedRole, username);
-        }
+      if (result?.ok) {
+        // NextAuth login successful
+        console.log('NextAuth login successful for role:', selectedRole);
+        // The session will be handled by NextAuth and the page will update automatically
+      } else {
+        setError('Invalid username or password. Please check your credentials and try again.');
       }
-    } catch (backendError) {
-      console.error('Backend login failed:', backendError);
-      
-      // Fallback to NextAuth only
-      try {
-        const result = await signIn('credentials', {
-          redirect: false,
-          username,
-          password,
-          role: selectedRole,
-        });
-
-        if (result?.ok) {
-          console.log('NextAuth login successful');
-        } else if (result?.error) {
-          // Both backend and NextAuth failed, try legacy validation
-          const validCredentials = demoCredentials[selectedRole];
-          
-          if (username === validCredentials.username && password === validCredentials.password) {
-            onLogin(selectedRole, username);
-          } else {
-            setError('Invalid username or password. Please try again.');
-          }
-        }
-      } catch (nextAuthError) {
-        // All methods failed, try legacy validation as final fallback
-        const validCredentials = demoCredentials[selectedRole];
-        
-        if (username === validCredentials.username && password === validCredentials.password) {
-          onLogin(selectedRole, username);
-        } else {
-          setError('Authentication failed. Please check your credentials and try again.');
-        }
-      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Authentication failed. Please check your credentials and try again.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillDemoCredentials = () => {
-    const credentials = demoCredentials[selectedRole];
-    setUsername(credentials.username);
-    setPassword(credentials.password);
   };
 
   return (
@@ -137,6 +86,7 @@ export default function LoginForm({ selectedRole, onLogin, onBack }) {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Sign In</h1>
           <p className="text-gray-600 mt-2">{config.title}</p>
+          <p className="text-sm text-gray-500 mt-1">Please enter your credentials to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -221,18 +171,16 @@ export default function LoginForm({ selectedRole, onLogin, onBack }) {
           </button>
         </form>
 
-        {/* Demo Credentials */}
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Demo Credentials:</h4>
-          <div className="text-xs text-gray-600 space-y-1">
-            <div>Username: {demoCredentials[selectedRole].username}</div>
-            <div>Password: {demoCredentials[selectedRole].password}</div>
-            <button
-              onClick={fillDemoCredentials}
-              className="mt-2 text-blue-600 hover:text-blue-700 text-xs underline"
-            >
-              Fill automatically
-            </button>
+        {/* Test credentials info for development */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="text-center">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">Test Accounts Available:</h4>
+            <div className="text-xs text-blue-700 space-y-1">
+              <div><strong>Advisor:</strong> advisor1 / password123</div>
+              <div><strong>Member:</strong> member1 / password123</div>
+              <div><strong>Regulator:</strong> regulator1 / password123</div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">Use these credentials for testing</p>
           </div>
         </div>
       </div>

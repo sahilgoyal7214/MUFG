@@ -8,9 +8,9 @@ import Dashboard from '../components/Dashboard';
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const [currentUser, setCurrentUser] = useState('member'); // Default to member
+  const [currentUser, setCurrentUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
-  const [username, setUsername] = useState('Demo User');
+  const [username, setUsername] = useState('');
 
   // Handle session changes - when user logs in via NextAuth
   useEffect(() => {
@@ -20,8 +20,9 @@ export default function Home() {
       setSelectedRole(null); // Clear role selection when logged in
     } else if (status === 'unauthenticated') {
       // Reset state when session ends
-      setCurrentUser('member'); // Keep default member instead of null
-      setUsername('Demo User');
+      setCurrentUser(null);
+      setUsername('');
+      setSelectedRole(null);
     }
   }, [session, status]);
 
@@ -29,29 +30,21 @@ export default function Home() {
     setSelectedRole(role);
   };
 
-  const handleLogin = (role, user) => {
-    // This handles the legacy login flow
-    setCurrentUser(role);
-    setUsername(user);
-  };
-
   const handleLogout = async () => {
     if (session) {
       // If using NextAuth session, sign out properly
       await signOut({ redirect: false });
-    } else {
-      // Handle legacy logout - show role selection again
-      setCurrentUser(null);
-      setSelectedRole(null);
-      setUsername('Demo User');
     }
+    // Reset state after logout
+    setCurrentUser(null);
+    setUsername('');
+    setSelectedRole(null);
   };
 
   const handleRoleSwitch = (newRole) => {
-    setCurrentUser(newRole);
-    // Keep the same username unless logged in via session
-    if (!session?.user) {
-      setUsername('Demo User');
+    // Only allow role switching if user is authenticated
+    if (session?.user) {
+      setCurrentUser(newRole);
     }
   };
 
@@ -73,12 +66,12 @@ export default function Home() {
 
   return (
     <main>
-      {!selectedRole && !currentUser ? (
+      {!selectedRole && !session?.user ? (
         <RoleSelection onRoleSelect={handleRoleSelect} />
-      ) : selectedRole && !currentUser ? (
+      ) : selectedRole && !session?.user ? (
         <LoginForm 
           selectedRole={selectedRole} 
-          onLogin={handleLogin}
+          onLogin={() => {}} // NextAuth handles login
           onBack={handleBackToRoleSelection}
         />
       ) : (

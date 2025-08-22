@@ -116,38 +116,40 @@ export class GraphInsightsService {
       const startTime = Date.now();
       console.log('🚀 Starting graph analysis at:', new Date().toISOString());
 
-      // Check environment configuration
-      const llavaUrl = process.env.GRAPH_LLM_URL;
-      const modelName = process.env.GRAPH_LLM_MODEL;
+      // Use LLaVa configuration
+      const llavaUrl = process.env.GRAPH_LLM_URL || process.env.LOCAL_LLM_URL;
+      const modelName = 'llava'; // Always use llava for image analysis
 
-      console.log('📝 Using LLM configuration:', { llavaUrl, modelName });
+      console.log('📝 Using LLaVa configuration:', { llavaUrl, modelName });
       
+      if (!llavaUrl) {
+        throw new Error('No LLM URL configured');
+      }
+
       // Save base64 as temporary image file
       tempFilePath = await this.saveBase64AsImage(base64Image);
-      console.log('� Created temp image file:', tempFilePath);
+      console.log('📁 Created temp image file:', tempFilePath);
       
-      // Read the image file and encode it as base64 for the request
+      // For LLaVa model with image support
       const imageBuffer = await fs.promises.readFile(tempFilePath);
       const imageBase64 = imageBuffer.toString('base64');
       
-      // Use Ollama's expected format
       const payload = {
         model: modelName,
         prompt: 'This is a pension fund analytics graph. Please analyze this image and focus on key financial metrics, trends, and insights that would be relevant for pension fund management. What are the main patterns and what do they suggest about fund performance or risk?',
         images: [imageBase64],
         stream: false
       };
+      
+      console.log('📦 Using LLaVa with image analysis');
+      console.log('🚀 Sending request to LLM...');
 
-      console.log('📦 Sending payload with image size:', imageBase64.length);
-
-      // Function to handle timeout - 3 minutes to allow for thorough processing
+      // Send to LLM with 2-minute timeout
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('LLM request timed out')), 180000);
+        setTimeout(() => reject(new Error('LLM request timed out after 2 minutes')), 120000);
       });
 
-      console.log('🚀 Sending JSON payload to LLaVA...');
-
-      // Send to LLaVa using fetch with JSON payload
+      // Send to LLM with timeout protection
       const response = await Promise.race([
         fetch(llavaUrl, {
           method: 'POST',
@@ -159,37 +161,51 @@ export class GraphInsightsService {
         timeoutPromise
       ]);
 
+      console.log('📡 Received response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        console.error('❌ LLM request failed:', errorText);
+        throw new Error(`LLM request failed: HTTP ${response.status} - ${errorText}`);
       }
 
       let responseText = await response.text();
-      console.log('📥 Raw response text:', responseText);
+      console.log('📥 Raw response received, length:', responseText.length);
 
       try {
-        // Try to parse the response text
+        // Try to parse as JSON first
         const responseData = JSON.parse(responseText);
-        console.log('📥 Parsed response:', responseData);
+        console.log('✅ Successfully parsed JSON response');
 
-        // Simple validation
-        if (!responseData) {
-          throw new Error('Empty response from LLM');
+        // Extract the analysis text from the response
+        let analysisText = '';
+        if (responseData.response) {
+          analysisText = responseData.response;
+        } else if (responseData.message) {
+          analysisText = responseData.message;
+        } else if (typeof responseData === 'string') {
+          analysisText = responseData;
+        } else {
+          analysisText = JSON.stringify(responseData);
         }
 
         return {
           success: true,
-          data: responseData,
+          data: {
+            analysis: analysisText.trim()
+          },
           status: 200,
           metadata: {
             timestamp: new Date().toISOString(),
-            processingTime: Date.now() - startTime
+            processingTime: Date.now() - startTime,
+            modelUsed: modelName,
+            responseLength: analysisText.length
           }
         };
 
       } catch (parseError) {
-        // If it's not JSON, return the raw text as analysis
-        console.log('Not JSON, treating as plain text response');
+        // If it's not JSON, treat as plain text response
+        console.log('📄 Response is plain text, not JSON');
         return {
           success: true,
           data: {
@@ -202,17 +218,6 @@ export class GraphInsightsService {
           }
         };
       }
-
-      return {
-        success: true,
-        data: responseData,
-        status: 200,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          processingTime: Date.now() - startTime,
-          model: modelName
-        }
-      };
 
     } catch (error) {
       console.error('Error analyzing graph:', error);

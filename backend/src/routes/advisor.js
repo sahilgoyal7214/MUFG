@@ -4,7 +4,7 @@ import MemberSegmentationService from '../services/MemberSegmentationService.js'
 import PersonalizedRiskAlertService from '../services/PersonalizedRiskAlertService.js';
 import SmartContributionService from '../services/SmartContributionService.js';
 import WhatIfSimulatorService from '../services/WhatIfSimulatorService.js';
-import { authenticateTest as authenticate } from '../middleware/auth-test.js';
+import { authenticate } from '../middleware/auth.js';
 import { body, param, query, validationResult } from 'express-validator';
 
 const router = express.Router();

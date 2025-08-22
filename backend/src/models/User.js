@@ -23,7 +23,7 @@ export class User {
   // Static methods for database operations
   static async findById(id) {
     try {
-      const query = 'SELECT * FROM users WHERE id = $1 AND is_active = true';
+      const query = 'SELECT * FROM users WHERE id = $1';
       const result = await db.query(query, [id]);
       
       if (result.rows.length === 0) {
@@ -39,7 +39,7 @@ export class User {
 
   static async findByMemberId(memberId) {
     try {
-      const query = 'SELECT * FROM users WHERE member_id = $1 AND is_active = true';
+      const query = 'SELECT * FROM users WHERE member_id = $1';
       const result = await db.query(query, [memberId]);
       
       if (result.rows.length === 0) {
@@ -55,7 +55,7 @@ export class User {
 
   static async findByEmail(email) {
     try {
-      const query = 'SELECT * FROM users WHERE email = $1 AND is_active = true';
+      const query = 'SELECT * FROM users WHERE email = $1';
       const result = await db.query(query, [email]);
       
       if (result.rows.length === 0) {
@@ -178,37 +178,17 @@ export class User {
     }
   }
 
-  static async findAll(filters = {}) {
+  static async findAll() {
     try {
-      let query = 'SELECT * FROM users WHERE is_active = true';
-      const values = [];
-      let paramCount = 1;
+      let query = 'SELECT * FROM users';
+      const params = [];
 
-      // Add filters
-      if (filters.role) {
-        query += ` AND role = $${paramCount++}`;
-        values.push(filters.role);
-      }
-
-      if (filters.search) {
-        query += ` AND (name ILIKE $${paramCount++} OR email ILIKE $${paramCount++})`;
-        values.push(`%${filters.search}%`, `%${filters.search}%`);
-        paramCount++; // Account for second parameter
-      }
-
+      // Add ORDER BY clause
       query += ' ORDER BY created_at DESC';
 
-      if (filters.limit) {
-        query += ` LIMIT $${paramCount++}`;
-        values.push(filters.limit);
-      }
+      console.log('🔍 Executing query:', query);
+      const result = await db.query(query, params);
 
-      if (filters.offset) {
-        query += ` OFFSET $${paramCount++}`;
-        values.push(filters.offset);
-      }
-
-      const result = await db.query(query, values);
       return result.rows.map(row => new User(row));
     } catch (error) {
       console.error('Error finding all users:', error);

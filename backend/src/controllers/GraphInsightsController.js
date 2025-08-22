@@ -11,12 +11,21 @@ export class GraphInsightsController {
    * Analyze graph and return insights
    */
   static async analyzeGraph(req, res) {
+    console.log('🎯 GraphInsightsController.analyzeGraph called');
+    console.log('📝 Request body keys:', Object.keys(req.body));
+    console.log('👤 User:', req.user?.id, req.user?.role);
+    
     try {
       const { base64Image, context, graphType } = req.body;
       const user = req.user;
 
+      console.log('🖼️ Base64 image length:', base64Image?.length || 0);
+      console.log('📊 Graph type:', graphType);
+      console.log('🔍 Context:', context);
+
       // Validate input
       if (!base64Image) {
+        console.log('❌ No base64Image provided');
         return res.status(400).json({
           error: {
             message: 'Graph image is required',

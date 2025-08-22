@@ -36,19 +36,20 @@ const generateMockPensionData = () => {
   const mockData = [];
   for (let i = 0; i < 100; i++) {
     mockData.push({
-      User_ID: `U${String(i + 1).padStart(3, '0')}`,
-      Age: 25 + Math.floor(Math.random() * 40),
-      Gender: Math.random() > 0.5 ? 'Male' : 'Female',
-      Country: ['UK', 'US', 'Canada', 'Australia'][Math.floor(Math.random() * 4)],
-      Annual_Income: 30000 + Math.floor(Math.random() * 100000),
-      Current_Savings: Math.floor(Math.random() * 500000),
-      Contribution_Amount: 200 + Math.floor(Math.random() * 1000),
-      Projected_Pension_Amount: 100000 + Math.floor(Math.random() * 2000000),
-      Years_Contributed: Math.floor(Math.random() * 30),
-      Annual_Return_Rate: 3 + Math.random() * 8,
-      Retirement_Age_Goal: 60 + Math.floor(Math.random() * 10),
-      Employer_Contribution: Math.floor(Math.random() * 500),
-      Total_Annual_Contribution: Math.floor(Math.random() * 10000),
+      user_id: `U${String(i + 1).padStart(3, '0')}`,
+      age: 25 + Math.floor(Math.random() * 40),
+      gender: Math.random() > 0.5 ? 'Male' : 'Female',
+      country: ['UK', 'US', 'Canada', 'Australia'][Math.floor(Math.random() * 4)],
+      annual_income: 30000 + Math.floor(Math.random() * 100000),
+      current_savings: Math.floor(Math.random() * 500000),
+      contribution_amount: 200 + Math.floor(Math.random() * 1000),
+      projected_pension_amount: 100000 + Math.floor(Math.random() * 2000000),
+      years_contributed: Math.floor(Math.random() * 30),
+      annual_return_rate: (3 + Math.random() * 8).toString(),
+      retirement_age_goal: 60 + Math.floor(Math.random() * 10),
+      employer_contribution: Math.floor(Math.random() * 500),
+      total_annual_contribution: Math.floor(Math.random() * 10000),
+      // Keep timeline data for charts if needed
       ProjectionTimeline: Array.from({ length: 10 }, (_, idx) => 2024 + idx),
       Savings: Array.from({ length: 10 }, (_, idx) => 50000 + (idx * 15000) + Math.random() * 10000)
     });
@@ -78,6 +79,10 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
       loadMockData();
     } else if (!backendLoading) {
       // Backend returned empty data, use mock data
+      console.warn('Backend returned empty data, using mock data');
+      loadMockData();
+    } else {
+      // For immediate rendering during development, load mock data
       loadMockData();
     }
   }, [backendData, backendLoading, backendError]);
@@ -98,9 +103,9 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
   const [chartCaptureError, setChartCaptureError] = useState(null);
 
   const [chartConfig, setChartConfig] = useState({
-    xAxis: "ProjectionTimeline",   // special-case branch in getChartData
-    yAxis: "Savings",              // maps to timeline savings values
-    chartType: "line",              // line chart shows growth well
+    xAxis: "age",                   // use real backend field
+    yAxis: "current_savings",       // use real backend field
+    chartType: "scatter",           // scatter plot works better with single data points
     colorScheme: "default",
     showInsights: true
   });
@@ -114,9 +119,9 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
     return [
       {
         id: 1,
-        xAxis: "ProjectionTimeline",  // 👈 use timeline
-        yAxis: "Savings",             // 👈 so it doesn’t collapse to 1 point
-        chartType: "line",
+        xAxis: "age",                 // use real backend field
+        yAxis: "current_savings",             // 👈 so it doesn’t collapse to 1 point
+        chartType: "scatter",
         isConfigured: true,
         colorScheme: "default",
         showInsights: true,
@@ -137,9 +142,14 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
   const [showAIInsightsModal, setShowAIInsightsModal] = useState(false);
   const [activeInsightChartId, setActiveInsightChartId] = useState(null);
   const [editingChartId, setEditingChartId] = useState(null);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [insightError, setInsightError] = useState(null);
+  const [aiInsights, setAiInsights] = useState([]);
+  const [insightProgress, setInsightProgress] = useState(0);
+  const [insightStatusMessage, setInsightStatusMessage] = useState('');
   const [tempConfig, setTempConfig] = useState({
-    xAxis: 'Age',
-    yAxis: 'Projected_Pension_Amount',
+    xAxis: 'age',
+    yAxis: 'projected_pension_amount',
     chartType: 'scatter',
     colorScheme: 'default',
     showInsights: true,
@@ -151,13 +161,12 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
   });
   // Curated axis options grouped by category
   const axisOptions = {
-    Demographics: ["Age", "Account_Age", "Years_Contributed"],
-    Financials: ["Current_Savings", "Annual_Income", "Debt_Level", "Monthly_Expenses"],
-    Contributions: ["Contribution_Amount", "Employer_Contribution", "Total_Annual_Contribution"],
-    Retirement: ["Projected_Pension_Amount", "Expected_Annual_Payout", "Inflation_Adjusted_Payout", "Years_of_Payout"],
-    Portfolio: ["Annual_Return_Rate", "Volatility", "Fees_Percentage", "Portfolio_Diversity_Score"],
-    Risk: ["Anomaly_Score", "Transaction_Pattern_Score"],
-
+    Demographics: ["age", "gender", "years_contributed", "account_age"],
+    Financials: ["current_savings", "annual_income", "debt_level", "monthly_expenses"],
+    Contributions: ["contribution_amount", "employer_contribution", "total_annual_contribution"],
+    Retirement: ["projected_pension_amount", "expected_annual_payout", "inflation_adjusted_payout", "years_of_payout"],
+    Portfolio: ["annual_return_rate", "volatility", "fees_percentage", "portfolio_diversity_score"],
+    Risk: ["anomaly_score", "transaction_pattern_score"],
   };
 
 
@@ -180,52 +189,139 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
 
   // Variable display names mapping
   const variableNames = {
-    User_ID: 'User ID',
-    Age: 'Age (years)',
-    Gender: 'Gender',
-    Country: 'Country',
-    Employment_Status: 'Employment Status',
-    Annual_Income: 'Annual Income ($)',
-    Current_Savings: 'Current Savings ($)',
-    Retirement_Age_Goal: 'Retirement Age Goal',
-    Contribution_Amount: 'Contribution Amount ($)',
-    Contribution_Frequency: 'Contribution Frequency',
-    Employer_Contribution: 'Employer Contribution',
-    Total_Annual_Contribution: 'Total Annual Contribution ($)',
-    Years_Contributed: 'Years Contributed',
-    Investment_Type: 'Investment Type',
-    Fund_Name: 'Fund Name',
-    Annual_Return_Rate: 'Annual Return Rate (%)',
-    Projected_Pension_Amount: 'Projected Pension Amount ($)',
-    Inflation_Adjusted_Payout: 'Inflation Adjusted Payout ($)',
-    Years_of_Payout: 'Years of Payout',
-    Transaction_ID: 'Transaction ID',
-    Transaction_Amount: 'Transaction Amount ($)',
-    Transaction_Date: 'Transaction Date',
-    Government_Pension_Eligibility: 'Government Pension Eligibility',
-    Account_Age: 'Account Age (years)',
-    Retirement_Readiness_Score: "Retirement Readiness Score",
-    Retirement_Coverage_Years: "Retirement Coverage Years",
-    Emergency_Fund_Months: "Emergency Fund (Months)",
-    Projected_NetWorth: "Projected Net Worth",
+    user_id: 'User ID',
+    age: 'Age (years)',
+    gender: 'Gender',
+    country: 'Country',
+    employment_status: 'Employment Status',
+    annual_income: 'Annual Income ($)',
+    current_savings: 'Current Savings ($)',
+    retirement_age_goal: 'Retirement Age Goal',
+    contribution_amount: 'Contribution Amount ($)',
+    contribution_frequency: 'Contribution Frequency',
+    employer_contribution: 'Employer Contribution',
+    total_annual_contribution: 'Total Annual Contribution ($)',
+    years_contributed: 'Years Contributed',
+    investment_type: 'Investment Type',
+    fund_name: 'Fund Name',
+    annual_return_rate: 'Annual Return Rate (%)',
+    projected_pension_amount: 'Projected Pension Amount ($)',
+    inflation_adjusted_payout: 'Inflation Adjusted Payout ($)',
+    years_of_payout: 'Years of Payout',
+    transaction_id: 'Transaction ID',
+    transaction_amount: 'Transaction Amount ($)',
+    transaction_date: 'Transaction Date',
+    government_pension_eligibility: 'Government Pension Eligibility',
+    account_age: 'Account Age (years)',
+    retirement_readiness_score: "Retirement Readiness Score",
+    retirement_coverage_years: "Retirement Coverage Years",
+    emergency_fund_months: "Emergency Fund (Months)",
+    projected_networth: "Projected Net Worth",
   };
 
 
   function ChatbotAssistant({ isDark }) {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { from: 'bot', text: 'Hi! How can I assist you today?' }
-  ]);
-  const [input, setInput] = useState('');
+    const [open, setOpen] = useState(false);
+    const [messages, setMessages] = useState([
+      { from: 'bot', text: 'Hi! I\'m your pension assistant. I can help you understand your retirement savings, projections, and answer questions about your pension data. How can I assist you today?' }
+    ]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages([...messages, { from: 'user', text: input }]);
-    setTimeout(() => {
-      setMessages(msgs => [...msgs, { from: 'bot', text: 'Thanks for your message! (Demo bot)' }]);
-    }, 500);
-    setInput('');
-  };
+    const handleSend = async () => {
+      if (!input.trim() || isLoading) return;
+      
+      const userMessage = input.trim();
+      setInput('');
+      setMessages(prev => [...prev, { from: 'user', text: userMessage }]);
+      setIsLoading(true);
+
+      try {
+        // Show thinking indicator immediately
+        setMessages(prev => [...prev, { from: 'bot', text: 'Thinking...', isThinking: true }]);
+        
+        // Create context from current user data
+        const context = {
+          hasData: data.length > 0,
+          userRole: 'member',
+          currentSavings: data.length > 0 ? data[0].current_savings : null,
+          projectedPension: data.length > 0 ? data[0].projected_pension_amount : null,
+          age: data.length > 0 ? data[0].age : null,
+          retirementAge: data.length > 0 ? data[0].retirement_age_goal : null,
+          annualReturn: data.length > 0 ? data[0].annual_return_rate : null,
+          yearsContributed: data.length > 0 ? data[0].years_contributed : null
+        };
+
+        const response = await ChatbotService.sendMessage(userMessage, context);
+        
+        // Remove thinking indicator and add real response
+        setMessages(prev => prev.slice(0, -1));
+        
+        // Handle different response structures
+        let responseText = '';
+        if (typeof response === 'string') {
+          responseText = response;
+        } else if (response && response.data && response.data.message) {
+          // Backend API structure: { success: true, data: { message: "...", ... } }
+          responseText = response.data.message;
+        } else if (response && response.message) {
+          responseText = response.message;
+        } else if (response && response.response) {
+          responseText = response.response;
+        } else {
+          console.log('Unexpected response structure:', response);
+          responseText = 'I apologize, but I\'m having trouble processing your request right now. Please try again later.';
+        }
+        
+        setMessages(prev => [...prev, { 
+          from: 'bot', 
+          text: responseText
+        }]);
+      } catch (error) {
+        console.error('Chatbot error:', error);
+        // Remove thinking indicator
+        setMessages(prev => prev.slice(0, -1));
+        // Provide intelligent fallback responses
+        const fallbackResponse = generateFallbackResponse(userMessage, data);
+        setMessages(prev => [...prev, { from: 'bot', text: fallbackResponse }]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Generate intelligent fallback responses when API is unavailable
+    const generateFallbackResponse = (message, userData) => {
+      const lowerMessage = message.toLowerCase();
+      
+      if (userData.length === 0) {
+        return "I notice we don't have your pension data loaded yet. Please ensure you're logged in and your data is available to get personalized advice.";
+      }
+
+      const user = userData[0];
+      
+      if (lowerMessage.includes('saving') || lowerMessage.includes('balance')) {
+        return `Based on your current data, you have $${user.current_savings?.toLocaleString() || 'N/A'} in savings. This is a good foundation for your retirement planning!`;
+      }
+      
+      if (lowerMessage.includes('pension') || lowerMessage.includes('retirement')) {
+        return `Your projected pension amount is $${user.projected_pension_amount?.toLocaleString() || 'N/A'}. You're currently ${user.retirement_age_goal - user.age || 'N/A'} years away from your retirement goal at age ${user.retirement_age_goal || 'N/A'}.`;
+      }
+      
+      if (lowerMessage.includes('return') || lowerMessage.includes('rate')) {
+        return `Your portfolio is showing an annual return rate of ${parseFloat(user.annual_return_rate || 0).toFixed(1)}%. This is ${parseFloat(user.annual_return_rate) > 5 ? 'performing well' : 'moderate'} for pension investments.`;
+      }
+      
+      if (lowerMessage.includes('contribute') || lowerMessage.includes('contribution')) {
+        return `You're currently contributing $${user.contribution_amount?.toLocaleString() || 'N/A'} per contribution, with $${user.employer_contribution?.toLocaleString() || 'N/A'} employer contribution. Consider maximizing employer matching if available!`;
+      }
+      
+      if (lowerMessage.includes('goal') || lowerMessage.includes('target')) {
+        const yearsToRetirement = user.retirement_age_goal - user.age;
+        return `You're planning to retire at ${user.retirement_age_goal}, which is ${yearsToRetirement} years from now. Your current trajectory projects $${user.projected_pension_amount?.toLocaleString() || 'N/A'} for retirement.`;
+      }
+
+      return `I understand you're asking about "${message}". While I'd love to provide more detailed analysis, I'm currently operating in offline mode. Based on your pension data, you have $${user.current_savings?.toLocaleString() || 'N/A'} in current savings and are projected to have $${user.projected_pension_amount?.toLocaleString() || 'N/A'} at retirement. Is there something specific about these numbers you'd like to discuss?`;
+    };
 
   // Detect dark mode from body class
   return (
@@ -256,8 +352,22 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
                 padding: '6px 12px',
                 borderRadius: 8,
                 display: 'inline-block',
-                fontWeight: msg.from === 'bot' ? 500 : 400
-              }}>{msg.text}</span>
+                fontWeight: msg.from === 'bot' ? 500 : 400,
+                maxWidth: '90%',
+                wordWrap: 'break-word',
+                opacity: msg.isThinking ? 0.8 : 1
+              }}>
+                {msg.isThinking ? (
+                  <span style={{ fontStyle: 'italic' }}>
+                    Thinking<span style={{ 
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                      opacity: 0.6 
+                    }}>...</span>
+                  </span>
+                ) : (
+                  msg.text
+                )}
+              </span>
             </div>
           ))}
         </div>
@@ -271,26 +381,32 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
               marginRight: 4,
               background: isDark ? '#111827' : '#fff',
               color: isDark ? '#f3f4f6' : '#111827',
-              outline: 'none'
+              outline: 'none',
+              opacity: isLoading ? 0.5 : 1
             }}
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
-            placeholder="Type your message..."
+            onKeyDown={e => { if (e.key === 'Enter' && !isLoading) handleSend(); }}
+            placeholder={isLoading ? "Processing..." : "Ask about your pension..."}
+            disabled={isLoading}
           />
           <button
             style={{
-              background: isDark ? '#10b981' : '#10b981',
-              color: isDark ? '#fff' : '#fff',
+              background: isLoading ? (isDark ? '#374151' : '#e5e7eb') : (isDark ? '#10b981' : '#10b981'),
+              color: isLoading ? (isDark ? '#6b7280' : '#9ca3af') : '#fff',
               borderRadius: 8,
               padding: '6px 12px',
               fontWeight: 600,
               border: 'none',
-              boxShadow: isDark ? '0 2px 8px rgba(16,185,129,0.15)' : '0 2px 8px rgba(16,185,129,0.12)',
-              cursor: 'pointer'
+              boxShadow: isLoading ? 'none' : (isDark ? '0 2px 8px rgba(16,185,129,0.15)' : '0 2px 8px rgba(16,185,129,0.12)'),
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.5 : 1
             }}
             onClick={handleSend}
-          >Send</button>
+            disabled={isLoading}
+          >
+            {isLoading ? '...' : 'Send'}
+          </button>
         </div>
       </div>
       <button
@@ -357,10 +473,10 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
 
         const kpiData = [
           ["Metric", "Value"],
-          ["Total Savings", `$${data[0].Current_Savings?.toLocaleString() || "N/A"}`],
-          ["Projected Pension", `$${data[0].Projected_Pension_Amount?.toLocaleString() || "N/A"}`],
-          ["Annual Return Rate", `${data[0].Annual_Return_Rate?.toFixed(1) || "N/A"}%`],
-          ["Years to Retirement", `${data[0].Retirement_Age_Goal - data[0].Age || "N/A"} years`],
+          ["Total Savings", `$${data[0].current_savings?.toLocaleString() || "N/A"}`],
+          ["Projected Pension", `$${data[0].projected_pension_amount?.toLocaleString() || "N/A"}`],
+          ["Annual Return Rate", `${parseFloat(data[0].annual_return_rate || 0).toFixed(1)}%`],
+          ["Years to Retirement", `${data[0].retirement_age_goal - data[0].age || "N/A"} years`],
         ];
 
         slide2.addTable(kpiData, { x: 1, y: 2, w: 8, h: 3 });
@@ -380,10 +496,10 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
     // Create summary sheet
     const summaryData = data.length > 0 ? [
       ['Metric', 'Value'],
-      ['Total Savings', data[0].Current_Savings || 'N/A'],
-      ['Projected Pension', data[0].Projected_Pension_Amount || 'N/A'],
-      ['Annual Return Rate', data[0].Annual_Return_Rate || 'N/A'],
-      ['Years to Retirement', (data[0].Retirement_Age_Goal - data[0].Age) || 'N/A']
+      ['Total Savings', data[0].current_savings || 'N/A'],
+      ['Projected Pension', data[0].projected_pension_amount || 'N/A'],
+      ['Annual Return Rate', parseFloat(data[0].annual_return_rate || 0).toFixed(1) + '%'],
+      ['Years to Retirement', (data[0].retirement_age_goal - data[0].age) || 'N/A']
     ] : [];
 
     const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
@@ -551,91 +667,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
 
     const colors = colorSchemes[config.colorScheme]?.colors || colorSchemes.default.colors;
 
-    // ✅ Special handling for nested structures
-    if (config.xAxis === "ProjectionTimeline") {
-      const timeline = data[0]?.ProjectionTimeline || [];
-      return [{
-        x: timeline.map(d => d.Age),   // or d.Year
-        y: timeline.map(d => d.Savings),
-        type: "scatter",
-        mode: "lines+markers",
-        line: { color: colors[0], width: 3 },
-        marker: { size: 6, color: colors[0] },
-        name: "Savings Projection"
-      }];
-    }
-
-    if (config.xAxis === "DebtVsSavings") {
-      const trajectory = data[0]?.DebtVsSavings || [];
-
-      // ✅ Case 1: Standard 2-line comparison over time
-      if (!config.yAxis || config.yAxis === "DebtVsSavings") {
-        return [
-          {
-            x: trajectory.map(d => d.Year),
-            y: trajectory.map(d => d.Savings),
-            type: "scatter",
-            mode: "lines+markers",
-            line: { color: colors[0], width: 3 },
-            marker: { size: 6, color: colors[0] },
-            name: "Savings"
-          },
-          {
-            x: trajectory.map(d => d.Year),
-            y: trajectory.map(d => d.Debt),
-            type: "scatter",
-            mode: "lines+markers",
-            line: { color: colors[1] || "red", width: 3 },
-            marker: { size: 6, color: colors[1] || "red" },
-            name: "Debt"
-          }
-        ];
-      }
-
-      // ✅ Case 2: One series only
-      if (["Savings", "Debt"].includes(config.yAxis)) {
-        return [{
-          x: trajectory.map(d => d.Year),
-          y: trajectory.map(d => d[config.yAxis]),
-          type: "scatter",
-          mode: "lines+markers",
-          line: { color: colors[0], width: 3 },
-          marker: { size: 6, color: colors[0] },
-          name: config.yAxis
-        }];
-      }
-
-      // ✅ Case 3: Compare nested series with a flat field (e.g., Years Contributed)
-      if (config.yAxis && data[0][config.yAxis] !== undefined) {
-        return [
-          {
-            x: trajectory.map(d => d.Year),
-            y: trajectory.map(() => data[0][config.yAxis]), // flat value repeated
-            type: "scatter",
-            mode: "lines",
-            line: { dash: "dot", color: colors[2] || "green", width: 2 },
-            name: variableNames[config.yAxis] || config.yAxis
-          }
-        ];
-      }
-
-      // ❌ Otherwise invalid
-      return [];
-    }
-
-
-    if (config.xAxis === "ScenarioProjections") {
-      const scenarios = data[0]?.ScenarioProjections || {};
-      return [{
-        x: Object.keys(scenarios),
-        y: Object.values(scenarios),
-        type: "bar",
-        marker: { color: colors[0], opacity: 0.8 },
-        name: "Scenario Outcomes"
-      }];
-    }
-
-    // ✅ Fallback to existing flat-field handling
+    // For real backend data, we work with flat fields
     const xData = getColumnData(config.xAxis);
     const yData = getColumnData(config.yAxis);
 
@@ -651,7 +683,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
           line: { color: isDark ? '#374151' : 'white', width: 2 },
           opacity: 0.8
         },
-        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+        name: `${variableNames[config.xAxis] || config.xAxis} vs ${variableNames[config.yAxis] || config.yAxis}`
       }];
     } else if (config.chartType === 'bar') {
       return [{
@@ -663,7 +695,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
           opacity: 0.8,
           line: { color: isDark ? '#374151' : 'white', width: 1 }
         },
-        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+        name: `${variableNames[config.xAxis] || config.xAxis} vs ${variableNames[config.yAxis] || config.yAxis}`
       }];
     } else if (config.chartType === 'line') {
       // Sort data by x-axis for line charts
@@ -677,14 +709,14 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
         mode: 'lines+markers',
         line: { color: colors[0], width: 3 },
         marker: { size: 8, color: colors[0] },
-        name: `${variableNames[config.xAxis]} vs ${variableNames[config.yAxis]}`
+        name: `${variableNames[config.xAxis] || config.xAxis} vs ${variableNames[config.yAxis] || config.yAxis}`
       }];
     } else if (config.chartType === 'histogram') {
       return [{
         x: yData,
         type: 'histogram',
         marker: { color: colors[0], opacity: 0.8 },
-        name: `Distribution of ${variableNames[config.yAxis]}`
+        name: `Distribution of ${variableNames[config.yAxis] || config.yAxis}`
       }];
     }
 
@@ -694,8 +726,8 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
   // Handle opening config modal for new chart
   const handleAddChart = (chartId) => {
     const numericColumns = getNumericColumns();
-    const defaultY = numericColumns.includes('Projected_Pension_Amount') ? 'Projected_Pension_Amount' : numericColumns[0];
-    const defaultX = numericColumns.includes('Age') ? 'Age' : numericColumns[1] || numericColumns[0];
+    const defaultY = numericColumns.includes('projected_pension_amount') ? 'projected_pension_amount' : numericColumns[0];
+    const defaultX = numericColumns.includes('age') ? 'age' : numericColumns[1] || numericColumns[0];
 
     setEditingChartId(chartId);
     setTempConfig({
@@ -755,9 +787,141 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
     setActiveInsightChartId(chartId);
     setShowAIInsightsModal(true);
     setActiveDropdown(null);
+    setIsLoadingInsights(true);
+    setInsightError(null);
+    setAiInsights([]);
+    setInsightProgress(0);
+    setInsightStatusMessage('Initializing AI analysis...');
 
-    // Capture chart when AI insights is opened
-    await captureChartBase64(chartId);
+    try {
+      console.log('🎯 Starting AI Insights analysis for chart:', chartId);
+      
+      // Step 1: Capture chart (10% progress)
+      setInsightStatusMessage('Capturing chart image...');
+      setInsightProgress(10);
+      await new Promise(resolve => setTimeout(resolve, 500)); // Visual feedback
+      
+      const base64Image = await captureChartBase64(chartId);
+      console.log('📸 Chart captured:', base64Image ? 'success' : 'failed');
+      
+      if (!base64Image) {
+        throw new Error('Failed to capture chart image');
+      }
+
+      // Step 2: Preparing AI request (20% progress)
+      setInsightStatusMessage('Preparing AI analysis request...');
+      setInsightProgress(20);
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      console.log('🚀 Sending to AI analysis...', {
+        chartType: chart?.type || 'scatter',
+        imageLength: base64Image.length
+      });
+
+      // Step 3: Sending to AI (30% progress)
+      setInsightStatusMessage('Sending to AI model for analysis...');
+      setInsightProgress(30);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Create a timeout promise for the AI request (2 minutes)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('AI analysis timed out after 2 minutes. The model may be busy.'));
+        }, 120000); // 2 minutes
+      });
+
+      // Progress simulation during AI processing
+      const progressPromise = new Promise((resolve) => {
+        let progress = 30;
+        const interval = setInterval(() => {
+          progress += Math.random() * 10; // Random progress increments
+          if (progress > 90) progress = 90; // Cap at 90% until completion
+          setInsightProgress(progress);
+          
+          // Update status messages during processing
+          if (progress < 50) {
+            setInsightStatusMessage('AI model processing image...');
+          } else if (progress < 70) {
+            setInsightStatusMessage('Analyzing patterns and trends...');
+          } else if (progress < 85) {
+            setInsightStatusMessage('Generating insights and recommendations...');
+          } else {
+            setInsightStatusMessage('Finalizing analysis results...');
+          }
+        }, 2000); // Update every 2 seconds
+
+        // Clear interval when done (will be cleared by the actual API response)
+        setTimeout(() => {
+          clearInterval(interval);
+          resolve();
+        }, 115000); // Slightly less than timeout
+      });
+
+      // Send to backend for AI analysis with timeout protection
+      const aiAnalysisPromise = ChatbotService.analyzeGraph(base64Image, {
+        chartType: chart?.type || 'scatter',
+        xAxis: chart?.xAxis || 'unknown',
+        yAxis: chart?.yAxis || 'unknown',
+        title: chart?.title || 'Pension Data Chart',
+        analysisType: 'detailed_pension_insights'
+      });
+
+      // Race between AI response and timeout
+      const response = await Promise.race([
+        aiAnalysisPromise,
+        timeoutPromise
+      ]);
+
+      console.log('🤖 AI Analysis response:', response);
+      console.log('🔍 Response structure:', JSON.stringify(response, null, 2));
+
+      // Step 4: Processing results (95% progress)
+      setInsightStatusMessage('Processing AI response...');
+      setInsightProgress(95);
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Simplified response handling
+      if (response && response.success && response.data && response.data.data && response.data.data.analysis) {
+        // Parse the AI analysis into structured insights
+        const insights = parseAIAnalysisToInsights(response.data.data.analysis, chart);
+        console.log('✨ Parsed insights:', insights);
+        
+        // Step 5: Complete (100% progress)
+        setInsightStatusMessage('Analysis complete!');
+        setInsightProgress(100);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        setAiInsights(insights);
+      } else {
+        console.warn('⚠️ Unexpected response format:', response);
+        console.log('🔍 Available response keys:', Object.keys(response || {}));
+        throw new Error('Invalid response format from AI analysis');
+      }
+
+    } catch (error) {
+      console.error('❌ AI Insights error:', error);
+      
+      let errorMessage = 'Failed to generate AI insights.';
+      if (error.message.includes('timed out')) {
+        errorMessage = 'AI analysis timed out. The model may be processing other requests.';
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network error connecting to AI service.';
+      } else if (error.message.includes('capture')) {
+        errorMessage = 'Failed to capture chart image.';
+      }
+      
+      setInsightError(`${errorMessage} Using fallback analysis.`);
+      setInsightStatusMessage('Using fallback analysis...');
+      
+      // Show fallback insights
+      const fallbackInsights = getAIInsights(chart);
+      console.log('🔄 Using fallback insights:', fallbackInsights);
+      setAiInsights(fallbackInsights);
+    } finally {
+      setIsLoadingInsights(false);
+      setInsightProgress(0);
+      setInsightStatusMessage('');
+    }
   };
 
   // Enhanced chart base64 capture function
@@ -829,12 +993,72 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
         preview: cleanBase64.substring(0, 100) + '...'
       });
 
+      return cleanBase64; // Return the base64 data for AI analysis
+
     } catch (error) {
       console.error('Error capturing chart:', error);
       setChartCaptureError(error.message);
+      return null; // Return null if capture fails
     } finally {
       setIsCapturingChart(false);
     }
+  };
+
+  // Parse AI analysis text into structured insights
+  const parseAIAnalysisToInsights = (analysisText, chart) => {
+    const insights = [];
+    
+    // Split analysis into sections
+    const sections = analysisText.split('\n').filter(line => line.trim().length > 0);
+    
+    for (let i = 0; i < sections.length; i++) {
+      const line = sections[i].trim();
+      
+      // Look for key insights patterns
+      if (line.includes('trend') || line.includes('pattern') || line.includes('correlation')) {
+        insights.push({
+          icon: '📈',
+          title: 'Trend Analysis',
+          text: line
+        });
+      } else if (line.includes('risk') || line.includes('concern') || line.includes('warning')) {
+        insights.push({
+          icon: '⚠️',
+          title: 'Risk Assessment',
+          text: line
+        });
+      } else if (line.includes('recommend') || line.includes('suggest') || line.includes('advice')) {
+        insights.push({
+          icon: '💡',
+          title: 'Recommendation',
+          text: line
+        });
+      } else if (line.includes('performance') || line.includes('return') || line.includes('growth')) {
+        insights.push({
+          icon: '🎯',
+          title: 'Performance Insights',
+          text: line
+        });
+      } else if (line.length > 50 && !line.includes(':') && insights.length < 5) {
+        // Generic insight for substantial content
+        insights.push({
+          icon: '📊',
+          title: 'Data Analysis',
+          text: line
+        });
+      }
+    }
+    
+    // Fallback if no insights were extracted
+    if (insights.length === 0) {
+      insights.push({
+        icon: '🤖',
+        title: 'AI Analysis',
+        text: analysisText.length > 200 ? analysisText.substring(0, 200) + '...' : analysisText
+      });
+    }
+    
+    return insights.slice(0, 6); // Limit to 6 insights
   };
 
   // Function to download the captured chart
@@ -1033,7 +1257,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
               {[
                 {
                   title: 'Total Savings',
-                  value: data.length > 0 ? `$${data[0].Current_Savings?.toLocaleString() || 'N/A'}` : 'Loading...',
+                  value: data.length > 0 ? `$${data[0].current_savings?.toLocaleString() || 'N/A'}` : 'Loading...',
                   change: '+12.5%',
                   changeType: 'positive',
                   icon: (
@@ -1044,7 +1268,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
                 },
                 {
                   title: 'Projected Pension',
-                  value: data.length > 0 ? `$${data[0].Projected_Pension_Amount?.toLocaleString() || 'N/A'}` : 'Loading...',
+                  value: data.length > 0 ? `$${data[0].projected_pension_amount?.toLocaleString() || 'N/A'}` : 'Loading...',
                   change: '+8.2%',
                   changeType: 'positive',
                   icon: (
@@ -1055,7 +1279,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
                 },
                 {
                   title: 'Annual Return',
-                  value: data.length > 0 ? `${data[0].Annual_Return_Rate?.toFixed(1) || 'N/A'}%` : 'Loading...',
+                  value: data.length > 0 ? `${parseFloat(data[0].annual_return_rate || 0).toFixed(1)}%` : 'Loading...',
                   change: '+2.1%',
                   changeType: 'positive',
                   icon: (
@@ -1066,7 +1290,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
                 },
                 {
                   title: 'Years to Retirement',
-                  value: data.length > 0 ? `${data[0].Retirement_Age_Goal - data[0].Age || 'N/A'} years` : 'Loading...',
+                  value: data.length > 0 ? `${data[0].retirement_age_goal - data[0].age || 'N/A'} years` : 'Loading...',
                   change: '-1 year',
                   changeType: 'neutral',
                   icon: (
@@ -1368,58 +1592,101 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
 
                   {/* Modal Content */}
                   <div className="p-6">
-                    {/* Loading Animation */}
-                    <div className={`mb-6 p-4 rounded-xl border-2 border-dashed transition-all duration-300 ${isDark
+                    {/* AI Insights Loading or Content */}
+                    {isLoadingInsights ? (
+                      <div className={`mb-6 p-6 rounded-xl border-2 border-dashed transition-all duration-300 ${isDark
                         ? 'border-gray-600 bg-gray-800/30'
                         : 'border-gray-300 bg-gray-50'
-                      }`}>
-                      <div className="flex items-center justify-center space-x-3 mb-3">
-                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-500 border-t-transparent"></div>
-                        <span className={`text-sm font-medium transition-colors duration-300 ${isDark ? 'text-gray-300' : 'text-gray-700'
-                          }`}>
-                          Analyzing chart data with AI...
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                        <div className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full animate-pulse" style={{ width: '75%' }}></div>
-                      </div>
-                      <p className={`text-xs text-center transition-colors duration-300 ${isDark ? 'text-gray-500' : 'text-gray-500'
                         }`}>
-                        Processing patterns and generating insights...
-                      </p>
-                    </div>
-
-                    {/* AI Insights List */}
-                    <div className="space-y-4">
-                      {(() => {
-                        const chart = gridCharts.find(c => c.id === activeInsightChartId);
-                        return chart ? getAIInsights(chart) : [];
-                      })().map((insight, index) => (
-                        <div key={index} className={`p-4 rounded-xl border transition-all duration-300 hover:shadow-lg ${isDark
-                            ? 'bg-gray-700/50 border-gray-600 hover:border-gray-500'
-                            : 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:border-blue-300'
+                        <div className="flex items-center justify-center space-x-3 mb-4">
+                          <div className="animate-spin rounded-full h-8 w-8 border-3 border-purple-500 border-t-transparent"></div>
+                          <span className={`text-lg font-medium transition-colors duration-300 ${isDark ? 'text-gray-200' : 'text-gray-800'
+                            }`}>
+                            AI Analysis in Progress
+                          </span>
+                        </div>
+                        
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+                          <div 
+                            className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${insightProgress}%` }}
+                          ></div>
+                        </div>
+                        
+                        {/* Status Message */}
+                        <p className={`text-sm text-center transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-600'
                           }`}>
-                          <div className="flex items-start space-x-4">
-                            <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-lg ${isDark
-                                ? 'bg-gray-600'
-                                : 'bg-white shadow-sm'
-                              }`}>
-                              {insight.icon}
-                            </div>
-                            <div className="flex-1">
-                              <h4 className={`font-semibold mb-2 transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'
-                                }`}>
-                                {insight.title}
-                              </h4>
-                              <p className={`text-sm leading-relaxed transition-colors duration-300 ${isDark ? 'text-gray-300' : 'text-gray-700'
-                                }`}>
-                                {insight.text}
-                              </p>
+                          {insightStatusMessage || 'Processing your chart with AI...'}
+                        </p>
+                        
+                        {/* Progress Percentage */}
+                        <p className={`text-xs text-center mt-2 font-mono transition-colors duration-300 ${isDark ? 'text-gray-500' : 'text-gray-500'
+                          }`}>
+                          {Math.round(insightProgress)}% complete
+                        </p>
+                        
+                        {/* Estimated Time */}
+                        {insightProgress > 30 && insightProgress < 90 && (
+                          <p className={`text-xs text-center mt-1 transition-colors duration-300 ${isDark ? 'text-gray-500' : 'text-gray-500'
+                            }`}>
+                            This may take up to 2 minutes for AI analysis...
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {/* Error Message */}
+                        {insightError && (
+                          <div className={`mb-4 p-4 rounded-lg border transition-all duration-300 ${isDark
+                            ? 'bg-yellow-800/20 border-yellow-600 text-yellow-300'
+                            : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                            }`}>
+                            <div className="flex items-center space-x-2">
+                              <span>⚠️</span>
+                              <span className="text-sm">{insightError}</span>
                             </div>
                           </div>
+                        )}
+
+                        {/* AI Insights List */}
+                        <div className="space-y-4">
+                          {aiInsights.length > 0 ? aiInsights.map((insight, index) => (
+                            <div key={index} className={`p-4 rounded-xl border transition-all duration-300 hover:shadow-lg ${isDark
+                                ? 'bg-gray-700/50 border-gray-600 hover:border-gray-500'
+                                : 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:border-blue-300'
+                              }`}>
+                              <div className="flex items-start space-x-4">
+                                <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-lg ${isDark
+                                    ? 'bg-gray-600'
+                                    : 'bg-white shadow-sm'
+                                  }`}>
+                                  {insight.icon}
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className={`font-semibold mb-2 transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'
+                                    }`}>
+                                    {insight.title}
+                                  </h4>
+                                  <p className={`text-sm leading-relaxed transition-colors duration-300 ${isDark ? 'text-gray-300' : 'text-gray-700'
+                                    }`}>
+                                    {insight.text}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )) : (
+                            <div className={`p-6 text-center rounded-xl border transition-all duration-300 ${isDark
+                              ? 'border-gray-600 bg-gray-800/30 text-gray-400'
+                              : 'border-gray-300 bg-gray-50 text-gray-600'
+                              }`}>
+                              <div className="text-4xl mb-2">🤖</div>
+                              <p>No insights available for this chart.</p>
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      </>
+                    )}
 
                     {/* Action Buttons */}
                     <div className="flex space-x-4 mt-8">

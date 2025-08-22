@@ -12,9 +12,14 @@ import { AuditService } from '../services/AuditService.js';
  */
 export const authenticate = async (req, res, next) => {
   try {
+    console.log('🔐 AUTH: Starting authentication...');
     const token = req.headers.authorization?.replace('Bearer ', '');
     
+    console.log('🔐 AUTH: Authorization header:', req.headers.authorization?.substring(0, 50) + '...');
+    console.log('🔐 AUTH: Extracted token:', token?.substring(0, 50) + '...');
+    
     if (!token) {
+      console.log('🔐 AUTH: No token provided');
       // Log failed authentication attempt
       await AuditService.logAuth({
         userId: null,
@@ -32,7 +37,9 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
+    console.log('🔐 AUTH: Attempting to extract user from token...');
     const user = await extractUserFromToken(token);
+    console.log('🔐 AUTH: User extracted successfully:', user?.username, user?.role);
     req.user = user;
     
     // Log successful authentication
@@ -44,8 +51,11 @@ export const authenticate = async (req, res, next) => {
       userAgent: req.get('User-Agent')
     });
     
+    console.log('🔐 AUTH: Authentication successful, proceeding to next middleware');
     next();
   } catch (error) {
+    console.log('🔐 AUTH: Authentication failed with error:', error.message);
+    console.log('🔐 AUTH: Error stack:', error.stack);
     // Log failed authentication attempt
     await AuditService.logAuth({
       userId: null,
@@ -78,9 +88,8 @@ export const authorize = (requiredPermissions = []) => {
       });
     }
 
-    const userRole = req.user.role;
-    const hasRequiredPermissions = requiredPermissions.every(permission => 
-      hasPermission(userRole, permission)
+    const hasRequiredPermissions = requiredPermissions.some(permission => 
+      req.user.permissions?.includes(permission)
     );
 
     if (!hasRequiredPermissions) {

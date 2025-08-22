@@ -64,15 +64,19 @@ const userConfigs = {
 
 
 // Mock Content Components
-export default function Dashboard({ currentUser = 'member', username = 'Demo User', onLogout = () => { }, onRoleSwitch = () => { } }) {
+export default function Dashboard({ currentUser = 'member', username = 'User', onLogout = () => { }, onRoleSwitch = () => { } }) {
+  // All hooks must be called first, before any early returns
   const [activeTab, setActiveTab] = useState('');
   const [isDark, setIsDark] = useState(false);
   const [userToggled, setUserToggled] = useState(false);
   const [isThemeLoaded, setIsThemeLoaded] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
-  const config = userConfigs[currentUser];
-  const themeColors = colorMap[config.color];
+  // Ensure we have a valid config with fallback to member
+  // This handles null/undefined currentUser safely
+  const safeCurrentUser = currentUser || 'member';
+  const config = userConfigs[safeCurrentUser] || userConfigs['member'];
+  const themeColors = colorMap[config?.color] || colorMap['blue'];
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
@@ -134,14 +138,14 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
   useEffect(() => {
     if (config && config.navigation.length > 0) {
       // Try to load saved tab for this user role
-      const savedTab = localStorage.getItem(`active-tab-${currentUser}`);
+      const savedTab = localStorage.getItem(`active-tab-${safeCurrentUser}`);
       if (savedTab && config.navigation.some(nav => nav.id === savedTab)) {
         setActiveTab(savedTab);
       } else {
         setActiveTab(config.navigation[0].id);
       }
     }
-  }, [config, currentUser]);
+  }, [config, safeCurrentUser]);
 
   const toggleTheme = () => {
     const newTheme = !isDark;
@@ -156,11 +160,11 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     // Save active tab for this user role
-    localStorage.setItem(`active-tab-${currentUser}`, tabId);
+    localStorage.setItem(`active-tab-${safeCurrentUser}`, tabId);
   };
 
   const renderContent = () => {
-    switch (currentUser) {
+    switch (safeCurrentUser) {
       case 'member':
         return <MemberContent activeTab={activeTab} isDark={isDark} currentUserId={"U1086"} />;
       case 'advisor':
@@ -168,7 +172,7 @@ export default function Dashboard({ currentUser = 'member', username = 'Demo Use
       case 'regulator':
         return <RegulatorContent activeTab={activeTab} isDark={isDark} />;
       default:
-        return null;
+        return <MemberContent activeTab={activeTab} isDark={isDark} currentUserId={"U1086"} />;
     }
   };
 

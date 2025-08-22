@@ -9,10 +9,14 @@
  */
 
 import express from 'express';
-import { authenticateTest as authenticate, authorize } from '../middleware/auth-test.js';
+import dotenv from 'dotenv';
+import { authenticate, authorize } from '../middleware/auth.js';
 import { PERMISSIONS } from '../config/roles.js';
 import { User } from '../models/User.js';
 import { AuditService } from '../services/AuditService.js';
+
+// Load environment variables
+dotenv.config();
 
 const router = express.Router();
 
@@ -54,19 +58,30 @@ router.use(authenticate);
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/', 
-  authorize([PERMISSIONS.USER_READ_ALL, PERMISSIONS.USER_READ_ASSIGNED]),
+  authorize([PERMISSIONS.USER_READ_ALL, PERMISSIONS.USER_READ_ASSIGNED, PERMISSIONS.USER_READ]),
   async (req, res) => {
     try {
       const user = req.user;
       let users = [];
 
+      // Get authorization mode from environment
+      const authMode = process.env.AUTHORIZATION_MODE || 'production';
+      
       // Regulators can see all users
       if (user.permissions?.includes(PERMISSIONS.USER_READ_ALL)) {
         users = await User.findAll();
       } 
-      // Advisors can see assigned clients (TODO: implement assignment logic)
+      // Advisors access based on authorization mode
       else if (user.permissions?.includes(PERMISSIONS.USER_READ_ASSIGNED)) {
-        users = await User.findByAdvisor(user.id);
+        if (authMode === 'prototype') {
+          // Prototype mode: Advisors can see all users
+          console.log(`[AUTH] Prototype mode active - advisor ${user.id} accessing all users`);
+          users = await User.findAll();
+        } else {
+          // Production mode: Advisors can only see assigned clients
+          console.log(`[AUTH] Production mode active - advisor ${user.id} accessing assigned clients`);
+          users = await User.findByAdvisor(user.id);
+        }
       }
       // Members can only see themselves
       else {

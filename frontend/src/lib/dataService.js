@@ -14,7 +14,7 @@ export class DataService {
   static async getPensionData(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const endpoint = `/data/pension-data${queryParams ? `?${queryParams}` : ''}`;
+      const endpoint = `/pension-data${queryParams ? `?${queryParams}` : ''}`;
       
       const response = await api.get(endpoint);
       return response;

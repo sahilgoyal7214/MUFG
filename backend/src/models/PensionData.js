@@ -558,6 +558,12 @@ class PensionData {
       const params = [];
       let paramIndex = 1;
 
+      // User ID filter (for member access to own data)
+      if (searchOptions.userId) {
+        query += ` AND user_id = $${paramIndex++}`;
+        params.push(searchOptions.userId);
+      }
+
       // Age range
       if (searchOptions.minAge) {
         query += ` AND age >= $${paramIndex++}`;

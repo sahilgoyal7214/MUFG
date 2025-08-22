@@ -10,7 +10,7 @@
 
 import express from 'express';
 import PensionData from '../models/PensionData.js';
-import { authenticateTest as authenticate, authorize } from '../middleware/auth-test.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 import { PERMISSIONS } from '../config/roles.js';
 import { AuditService } from '../services/AuditService.js';
 
@@ -164,7 +164,7 @@ router.use(authenticate);
  */
 
 // GET /api/pension-data - List all pension data with filtering
-router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL]), async (req, res) => {
+router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL, PERMISSIONS.MEMBER_DATA_READ_OWN]), async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 10, 100);
@@ -186,13 +186,21 @@ router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL]), async (req, res) 
       orderDirection: req.query.orderDirection || 'DESC'
     };
 
+    // If user only has MEMBER_DATA_READ_OWN permission, filter to their own data
+    const hasFullAccess = req.user.permissions.includes(PERMISSIONS.MEMBER_DATA_READ_ALL);
+    if (!hasFullAccess) {
+      // Members can only access their own data
+      searchOptions.userId = req.user.id;
+    }
+
     // Use search method for complex filtering or paginate for simple queries
     let result;
     if (Object.values(searchOptions).some(val => val !== undefined && val !== null)) {
       const data = await PensionData.search(searchOptions);
       
       // Calculate pagination manually for search results
-      const total = await PensionData.count();
+      const countWhere = hasFullAccess ? {} : { user_id: req.user.id };
+      const total = await PensionData.count(countWhere);
       result = {
         data,
         pagination: {
@@ -205,7 +213,9 @@ router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL]), async (req, res) 
         }
       };
     } else {
-      result = await PensionData.paginate(page, limit);
+      // For simple pagination without filters
+      const paginateOptions = hasFullAccess ? {} : { where: { user_id: req.user.id } };
+      result = await PensionData.paginate(page, limit, paginateOptions);
     }
 
     // Log data access

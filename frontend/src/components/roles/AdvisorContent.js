@@ -1,27 +1,22 @@
 'use client';
 import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
+import { useUsers, useMembers, useAnalytics, useChatbot } from '../../hooks/useApi';
+import apiService from '../../lib/apiService';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
-import { useEffect, useState } from 'react';
-
 function ChatbotAssistant({ isDark }) {
+  const { messages, sendMessage, loading } = useChatbot();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { from: 'bot', text: 'Hi! How can I assist you today?' }
-  ]);
   const [input, setInput] = useState('');
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages([...messages, { from: 'user', text: input }]);
-    setTimeout(() => {
-      setMessages(msgs => [...msgs, { from: 'bot', text: 'Thanks for your message! (Demo bot)' }]);
-    }, 500);
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    await sendMessage(input);
     setInput('');
   };
 
-  // Detect dark mode from body class
   return (
     <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}>
       <div
@@ -36,7 +31,7 @@ function ChatbotAssistant({ isDark }) {
           border: isDark ? '1px solid #374151' : 'none'
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 8, color: isDark ? '#f3f4f6' : '#111827' }}>Chatbot Assistant</div>
+        <div style={{ fontWeight: 600, marginBottom: 8, color: isDark ? '#f3f4f6' : '#111827' }}>AI Assistant</div>
         <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 8 }}>
           {messages.map((msg, i) => (
             <div key={i} style={{ textAlign: msg.from === 'bot' ? 'left' : 'right', marginBottom: 4 }}>
@@ -54,6 +49,18 @@ function ChatbotAssistant({ isDark }) {
               }}>{msg.text}</span>
             </div>
           ))}
+          {loading && (
+            <div style={{ textAlign: 'left', marginBottom: 4 }}>
+              <span style={{
+                background: isDark ? '#374151' : '#f3f4f6',
+                color: isDark ? '#f3f4f6' : '#111827',
+                padding: '6px 12px',
+                borderRadius: 8,
+                display: 'inline-block',
+                fontWeight: 500
+              }}>Thinking...</span>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex' }}>
           <input
@@ -70,21 +77,23 @@ function ChatbotAssistant({ isDark }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
-            placeholder="Type your message..."
+            placeholder="Ask about pension insights..."
+            disabled={loading}
           />
           <button
             style={{
-              background: isDark ? '#10b981' : '#10b981',
-              color: isDark ? '#fff' : '#fff',
+              background: loading ? (isDark ? '#6b7280' : '#9ca3af') : (isDark ? '#10b981' : '#10b981'),
+              color: '#fff',
               borderRadius: 8,
               padding: '6px 12px',
               fontWeight: 600,
               border: 'none',
               boxShadow: isDark ? '0 2px 8px rgba(16,185,129,0.15)' : '0 2px 8px rgba(16,185,129,0.12)',
-              cursor: 'pointer'
+              cursor: loading ? 'not-allowed' : 'pointer'
             }}
             onClick={handleSend}
-          >Send</button>
+            disabled={loading}
+          >{loading ? '...' : 'Send'}</button>
         </div>
       </div>
       <button
@@ -144,7 +153,19 @@ const loadChartPreferences = () => {
 };
 
 export default function AdvisorContent({ activeTab, isDark }) {
+  // API data hooks
+  const { users, loading: usersLoading, error: usersError } = useUsers();
+  const { members, loading: membersLoading, error: membersError } = useMembers();
+  const { analytics, loading: analyticsLoading, error: analyticsError } = useAnalytics();
+  
+  // Local state
   const [clients, setClients] = useState([]);
+  const [advisorStats, setAdvisorStats] = useState({
+    totalClients: 0,
+    assetsUnderManagement: 0,
+    avgPerformance: 0,
+    clientsNeedingReview: 0
+  });
   
   // Chart base64 storage state
   const [chartBase64Data, setChartBase64Data] = useState(null);
@@ -157,6 +178,52 @@ export default function AdvisorContent({ activeTab, isDark }) {
     yAxis: 'Current_Savings',
     chartType: 'scatter'
   });
+
+  // Load advisor-specific data
+  useEffect(() => {
+    const loadAdvisorData = async () => {
+      try {
+        // Load KPIs
+        const kpiResponse = await apiService.getAdvisorKPIs();
+        if (kpiResponse?.data) {
+          setAdvisorStats(kpiResponse.data);
+        }
+
+        // Load client portfolio
+        const clientsResponse = await apiService.getClientPortfolio();
+        if (clientsResponse?.data) {
+          setClients(clientsResponse.data);
+        }
+      } catch (error) {
+        console.error('Failed to load advisor data:', error);
+        // Fallback to demo data if API fails
+        loadDemoData();
+      }
+    };
+
+    const loadDemoData = () => {
+      fetch('/dummy_clients.csv')
+        .then(res => res.text())
+        .then(text => setClients(parseCSV(text)))
+        .catch(err => console.error('Failed to load demo data:', err));
+    };
+
+    // Load real data first, fallback to demo
+    loadAdvisorData();
+  }, []);
+
+  // Update stats when users data is loaded (for authorization mode demo)
+  useEffect(() => {
+    if (users.length > 0) {
+      setAdvisorStats(prev => ({
+        ...prev,
+        totalClients: users.length,
+        assetsUnderManagement: users.length * 183000, // Demo calculation
+        avgPerformance: 7.8,
+        clientsNeedingReview: Math.floor(users.length * 0.15)
+      }));
+    }
+  }, [users]);
 
   const [gridCharts, setGridCharts] = useState(() => {
     // Try to load from localStorage first
@@ -236,18 +303,44 @@ export default function AdvisorContent({ activeTab, isDark }) {
   const renderPortfolioTab = () => (
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Client Portfolio Management</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Client Portfolio Management</h2>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm">
+            <span className="text-blue-600 font-medium">Authorization Mode: Prototype</span>
+            <span className="text-blue-500 ml-2">• Showing all users</span>
+          </div>
+        </div>
+
+        {/* Loading States */}
+        {(usersLoading || membersLoading) && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Loading portfolio data...</span>
+          </div>
+        )}
+
+        {/* Error States */}
+        {(usersError || membersError) && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-600">Error loading data: {usersError || membersError}</p>
+            <p className="text-red-500 text-sm mt-1">Falling back to demo data...</p>
+          </div>
+        )}
 
         {/* Portfolio Summary */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <p className="text-sm font-medium text-gray-600">Total Clients</p>
-            <p className="text-2xl font-bold text-gray-900">247</p>
-            <p className="text-sm text-green-600">+12 this month</p>
+            <p className="text-2xl font-bold text-gray-900">{advisorStats.totalClients || users.length}</p>
+            <p className="text-sm text-green-600">
+              {users.length > 0 ? `API Connected • ${users.length} users` : '+12 this month'}
+            </p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <p className="text-sm font-medium text-gray-600">Assets Under Management</p>
-            <p className="text-2xl font-bold text-gray-900">$45.2M</p>
+            <p className="text-2xl font-bold text-gray-900">
+              ${((advisorStats.assetsUnderManagement || 45200000) / 1000000).toFixed(1)}M
+            </p>
             <p className="text-sm text-green-600">+8.3% YTD</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -287,26 +380,42 @@ export default function AdvisorContent({ activeTab, isDark }) {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {clients.map((client) => (
-                  <tr key={client.User_ID}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.User_ID}</td>
+                {(clients.length > 0 ? clients : users).map((client, index) => {
+                  const isUser = !client.User_ID; // If no User_ID, it's from users API
+                  const displayData = isUser ? {
+                    User_ID: client.id || index + 1,
+                    Name: client.username || client.email?.split('@')[0] || 'User',
+                    Age: Math.floor(Math.random() * 30) + 25, // Demo age
+                    Annual_Income: '$' + (Math.floor(Math.random() * 100000) + 50000).toLocaleString(),
+                    Current_Savings: '$' + (Math.floor(Math.random() * 500000) + 10000).toLocaleString(),
+                    Risk_Tolerance: ['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)],
+                    Retirement_Age_Goal: Math.floor(Math.random() * 10) + 60,
+                    Initials: (client.username || client.email || 'U')[0].toUpperCase(),
+                    InitialsColor: 'bg-blue-500',
+                    InitialsText: 'text-white'
+                  } : client;
+                  
+                  return (
+                  <tr key={displayData.User_ID}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{displayData.User_ID}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className={`w-8 h-8 ${client.InitialsColor} rounded-full flex items-center justify-center`}>
-                          <span className={`${client.InitialsText} font-medium text-sm`}>{client.Initials}</span>
+                        <div className={`w-8 h-8 ${displayData.InitialsColor} rounded-full flex items-center justify-center`}>
+                          <span className={`${displayData.InitialsText} font-medium text-sm`}>{displayData.Initials}</span>
                         </div>
                         <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{client.Name}</p>
-                          <p className="text-sm text-gray-500">Age {client.Age}</p>
+                          <p className="text-sm font-medium text-gray-900">{displayData.Name}</p>
+                          <p className="text-sm text-gray-500">Age {displayData.Age}</p>
+                          {isUser && <p className="text-xs text-blue-600">API User • Role: {client.role}</p>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Annual_Income ? `$${client.Annual_Income}` : ''}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Current_Savings ? `$${client.Current_Savings}` : ''}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{displayData.Annual_Income}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{displayData.Current_Savings}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${client.Risk_Tolerance === 'Low' ? 'bg-green-100 text-green-800' : client.Risk_Tolerance === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{client.Risk_Tolerance}</span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${displayData.Risk_Tolerance === 'Low' ? 'bg-green-100 text-green-800' : displayData.Risk_Tolerance === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{displayData.Risk_Tolerance}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.Retirement_Age_Goal}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{displayData.Retirement_Age_Goal}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         className="text-green-600 hover:text-green-700 mr-3"
@@ -341,7 +450,7 @@ export default function AdvisorContent({ activeTab, isDark }) {
                           </div>
                           <div id='tab-report' class='tab-content'>
                             <table><tbody>
-                              ${Object.entries(client).filter(([k]) => !['Initials', 'InitialsColor', 'InitialsText'].includes(k)).map(([key, value]) => `<tr><th>${key}</th><td>${value}</td></tr>`).join('')}
+                              ${Object.entries(displayData).filter(([k]) => !['Initials', 'InitialsColor', 'InitialsText'].includes(k)).map(([key, value]) => `<tr><th>${key}</th><td>${value}</td></tr>`).join('')}
                             </tbody></table>
                           </div>
                           <div id='tab-transactions' class='tab-content' style='display:none;'>
@@ -349,10 +458,10 @@ export default function AdvisorContent({ activeTab, isDark }) {
                               <thead><tr><th>Date</th><th>Transaction ID</th><th>Amount</th><th>Channel</th></tr></thead>
                               <tbody>
                                 <tr>
-                                  <td>${client.Transaction_Date}</td>
-                                  <td>${client.Transaction_ID}</td>
-                                  <td>${client.Transaction_Amount}</td>
-                                  <td>${client.Transaction_Channel}</td>
+                                  <td>${displayData.Transaction_Date || 'N/A'}</td>
+                                  <td>${displayData.Transaction_ID || 'N/A'}</td>
+                                  <td>${displayData.Transaction_Amount || 'N/A'}</td>
+                                  <td>${displayData.Transaction_Channel || 'N/A'}</td>
                                 </tr>
                               </tbody>
                             </table>
@@ -366,7 +475,8 @@ export default function AdvisorContent({ activeTab, isDark }) {
                       {/* Edit button removed for advisor */}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
