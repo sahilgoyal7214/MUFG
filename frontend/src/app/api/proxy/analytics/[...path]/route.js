@@ -2,9 +2,28 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { authOptions } from "../../../auth/[...nextauth]/route";
-import jwt from "jsonwebtoken"; // ✅ ESM import
+import { SignJWT } from "jose"; // ✅ ESM-compatible
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+
+async function createBackendToken(token) {
+  const payload = {
+    sub: token.sub,
+    email: token.email,
+    name: token.name,
+    username: token.username,
+    role: token.role,
+    roleData: token.roleData,
+  };
+
+  const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("24h")
+    .sign(secret);
+}
 
 export async function GET(request, { params }) {
   try {
@@ -18,41 +37,26 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "Failed to get token" }, { status: 500 });
     }
 
-    const backendToken = jwt.sign({
-      sub: token.sub,
-      email: token.email,
-      name: token.name,
-      username: token.username,
-      role: token.role,
-      roleData: token.roleData,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
-    }, process.env.NEXTAUTH_SECRET);
+    const backendToken = await createBackendToken(token);
 
     const { path } = params;
     const endpoint = path ? `/${path.join('/')}` : '';
     const url = new URL(request.url);
     const queryParams = url.searchParams.toString();
-    const backendUrl = `${BACKEND_URL}/api/members${endpoint}${queryParams ? `?${queryParams}` : ''}`;
+    const backendUrl = `${BACKEND_URL}/api/analytics${endpoint}${queryParams ? `?${queryParams}` : ''}`;
 
     const response = await fetch(backendUrl, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${backendToken}`,
+        'Content-Type': 'application/json',
       },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Members backend error ${response.status}:`, errorText);
-      return NextResponse.json({ error: `Backend request failed: ${response.status}` }, { status: response.status });
-    }
-
     const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Analytics proxy error:', error);
+    console.error('Analytics proxy GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -69,16 +73,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "Failed to get token" }, { status: 500 });
     }
 
-    const backendToken = jwt.sign({
-      sub: token.sub,
-      email: token.email,
-      name: token.name,
-      username: token.username,
-      role: token.role,
-      roleData: token.roleData,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
-    }, process.env.NEXTAUTH_SECRET);
+    const backendToken = await createBackendToken(token);
 
     const { path } = params;
     const endpoint = path ? `/${path.join('/')}` : '';
@@ -91,22 +86,16 @@ export async function POST(request, { params }) {
     const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${backendToken}`,
+        'Content-Type': 'application/json',
       },
       body: requestBody,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Analytics backend error ${response.status}:`, errorText);
-      return NextResponse.json({ error: `Backend request failed: ${response.status}` }, { status: response.status });
-    }
-
     const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Analytics proxy error:', error);
+    console.error('Analytics proxy POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

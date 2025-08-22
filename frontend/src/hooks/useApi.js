@@ -1,10 +1,12 @@
 /**
- * Custom React hook for API data management
+ Custom React hook for API data management
  * Provides loading states, error handling, and caching
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import apiService from '../lib/apiService';
+
 
 export function useApiData(role) {
   const [data, setData] = useState({
@@ -52,11 +54,19 @@ export function useApiData(role) {
 }
 
 export function useUsers() {
+  const { data: session, status } = useSession();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const loadUsers = useCallback(async () => {
+    if (status === 'loading') return; // Wait for session to load
+    if (status === 'unauthenticated') {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -69,7 +79,7 @@ export function useUsers() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     loadUsers();
@@ -77,18 +87,26 @@ export function useUsers() {
 
   return {
     users,
-    loading,
+    loading: loading || status === 'loading',
     error,
     refresh: loadUsers,
   };
 }
 
 export function useMembers(params = {}) {
+  const { data: session, status } = useSession();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const loadMembers = useCallback(async () => {
+    if (status === 'loading') return; // Wait for session to load
+    if (status === 'unauthenticated') {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -101,7 +119,7 @@ export function useMembers(params = {}) {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, [params, status]);
 
   useEffect(() => {
     loadMembers();
@@ -109,18 +127,26 @@ export function useMembers(params = {}) {
 
   return {
     members,
-    loading,
+    loading: loading || status === 'loading',
     error,
     refresh: loadMembers,
   };
 }
 
 export function useAnalytics() {
+  const { data: session, status } = useSession();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const loadAnalytics = useCallback(async () => {
+    if (status === 'loading') return; // Wait for session to load
+    if (status === 'unauthenticated') {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -133,7 +159,7 @@ export function useAnalytics() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     loadAnalytics();
@@ -141,7 +167,7 @@ export function useAnalytics() {
 
   return {
     analytics,
-    loading,
+    loading: loading || status === 'loading',
     error,
     refresh: loadAnalytics,
   };

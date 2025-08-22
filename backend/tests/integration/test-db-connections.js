@@ -5,12 +5,12 @@
  * Tests that all services can fetch data from the database
  */
 
-import db from './src/config/database.js';
-import PortfolioOptimizationService from './src/services/PortfolioOptimizationService.js';
-import MemberSegmentationService from './src/services/MemberSegmentationService.js';
-import PersonalizedRiskAlertService from './src/services/PersonalizedRiskAlertService.js';
-import SmartContributionService from './src/services/SmartContributionService.js';
-import WhatIfSimulatorService from './src/services/WhatIfSimulatorService.js';
+import db from '../../src/config/database.js';
+import PortfolioOptimizationService from '../../src/services/PortfolioOptimizationService.js';
+import MemberSegmentationService from '../../src/services/MemberSegmentationService.js';
+import PersonalizedRiskAlertService from '../../src/services/PersonalizedRiskAlertService.js';
+import SmartContributionService from '../../src/services/SmartContributionService.js';
+import WhatIfSimulatorService from '../../src/services/WhatIfSimulatorService.js';
 
 async function testDatabaseConnections() {
   console.log('🔧 Testing Database Connections for Dashboard Services');

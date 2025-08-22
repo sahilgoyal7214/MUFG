@@ -1,29 +1,9 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { getToken } from "next-auth/jwt";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
-
-async function createJWT(session) {
-  if (!session || !session.user) {
-    return null;
-  }
-
-  const tokenPayload = {
-    sub: session.user.id || session.user.email,
-    email: session.user.email,
-    name: session.user.name,
-    username: session.user.username,
-    role: session.user.role || 'member',
-    roleData: session.user.roleData || {},
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours
-  };
-
-  const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
-  return jwt.sign(tokenPayload, JWT_SECRET);
-}
 
 async function proxyRequest(request, method = 'GET') {
   try {
@@ -36,13 +16,27 @@ async function proxyRequest(request, method = 'GET') {
       );
     }
 
-    const token = await createJWT(session);
+    // Get the JWT token directly from NextAuth JWE
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
       return NextResponse.json(
-        { error: "Failed to generate token" },
+        { error: "Failed to get token" },
         { status: 500 }
       );
     }
+
+    // Create a JWT token that the backend expects
+    const jwt = require('jsonwebtoken');
+    const backendToken = jwt.sign({
+      sub: token.sub,
+      email: token.email,
+      name: token.name,
+      username: token.username,
+      role: token.role,
+      roleData: token.roleData,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
+    }, process.env.NEXTAUTH_SECRET);
 
     // Extract query parameters and path
     const url = new URL(request.url);
@@ -53,7 +47,7 @@ async function proxyRequest(request, method = 'GET') {
     const options = {
       method,
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${backendToken}`,
         'Content-Type': 'application/json',
       }
     };

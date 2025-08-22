@@ -70,7 +70,7 @@ class ApiService {
 
   // Analytics API
   async getAnalytics() {
-    return this.request('/analytics');
+    return this.request('/analytics/dashboard');
   }
 
   async getPerformanceMetrics() {
