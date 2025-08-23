@@ -17,17 +17,18 @@ export async function POST(request) {
 
 async function generateToken(request) {
   try {
-    // Get the NextAuth session with request context
+    // In App Router, we need to pass the request context
     const session = await getServerSession(authOptions);
     
     console.log('🔍 DEBUG: Session data:', JSON.stringify(session, null, 2));
     
     if (!session || !session.user) {
-      console.log('🔍 DEBUG: No session found, checking cookies...');
+      console.log('🔍 DEBUG: No session found');
+      console.log('🔍 DEBUG: Session status:', session ? 'exists but no user' : 'null');
       
-      // Try to get session from cookies manually
+      // Check if we have request headers
       const cookies = request?.headers?.get('cookie');
-      console.log('🔍 DEBUG: Cookies:', cookies?.substring(0, 100) + '...');
+      console.log('🔍 DEBUG: Request has cookies:', !!cookies);
       
       return NextResponse.json(
         { error: "Not authenticated" },

@@ -363,4 +363,72 @@ router.post('/retirement-readiness',
   }
 );
 
+/**
+ * @swagger
+ * /api/kpi/advisor:
+ *   get:
+ *     summary: Get advisor-specific KPIs
+ *     description: Retrieve aggregated KPIs and metrics for advisor dashboard
+ *     tags: [KPI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Advisor KPIs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalClients:
+ *                       type: integer
+ *                       description: Total number of clients
+ *                       example: 247
+ *                     assetsUnderManagement:
+ *                       type: number
+ *                       description: Total assets under management
+ *                       example: 45200000
+ *                     avgPortfolioPerformance:
+ *                       type: number
+ *                       description: Average portfolio performance
+ *                       example: 7.8
+ *                     clientsNeedingReview:
+ *                       type: integer
+ *                       description: Number of clients requiring review
+ *                       example: 18
+ *                     avgContributionRate:
+ *                       type: number
+ *                       description: Average contribution rate
+ *                       example: 8.2
+ *                     portfolioGrowthThisMonth:
+ *                       type: number
+ *                       description: Portfolio growth this month
+ *                       example: 3.5
+ */
+router.get('/advisor',
+  async (req, res) => {
+    try {
+      const advisorKpis = await KpiService.calculateAdvisorKPIs();
+      
+      res.json({
+        success: true,
+        data: advisorKpis
+      });
+
+    } catch (error) {
+      console.error('Error calculating advisor KPIs:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Error calculating advisor KPIs'
+      });
+    }
+  }
+);
+
 export default router;

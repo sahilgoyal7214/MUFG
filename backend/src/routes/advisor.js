@@ -1349,6 +1349,173 @@ router.get('/dashboard/:userId', [
  *                   description: Individual service status (when detailed)
  */
 
+/**
+ * @swagger
+ * /api/advisor/clients:
+ *   get:
+ *     summary: Get client portfolio for advisor
+ *     description: Retrieve list of clients with their portfolio data for advisor dashboard
+ *     tags: [Advisor]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of clients per page
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [name, portfolioValue, lastActivity, riskScore]
+ *           default: name
+ *         description: Field to sort by
+ *     responses:
+ *       200:
+ *         description: Client portfolio data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       User_ID:
+ *                         type: string
+ *                         example: "U001"
+ *                       Name:
+ *                         type: string
+ *                         example: "John Smith"
+ *                       Age:
+ *                         type: integer
+ *                         example: 45
+ *                       Annual_Income:
+ *                         type: string
+ *                         example: "$85,000"
+ *                       Current_Savings:
+ *                         type: string
+ *                         example: "$125,000"
+ *                       Risk_Tolerance:
+ *                         type: string
+ *                         example: "Medium"
+ *                       Retirement_Age_Goal:
+ *                         type: integer
+ *                         example: 65
+ *                       Portfolio_Performance:
+ *                         type: number
+ *                         example: 7.2
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *                     totalClients:
+ *                       type: integer
+ *                       example: 247
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
+
+// Get client portfolio for advisor dashboard
+router.get('/clients', async (req, res) => {
+  try {
+    const { page = 1, limit = 50, sortBy = 'name' } = req.query;
+    
+    // Import the service here to avoid circular dependency
+    const { default: db } = await import('../config/database.js');
+    
+    // Get all member data for advisor dashboard
+    const query = `
+      SELECT 
+        user_id as "User_ID",
+        CASE 
+          WHEN gender IS NOT NULL THEN 
+            CASE 
+              WHEN gender = 'Male' THEN 'Mr. User ' || user_id
+              WHEN gender = 'Female' THEN 'Ms. User ' || user_id
+              ELSE 'User ' || user_id
+            END
+          ELSE 'User ' || user_id
+        END as "Name",
+        age as "Age",
+        '$' || COALESCE(annual_income, 0) as "Annual_Income",
+        '$' || COALESCE(current_savings, 0) as "Current_Savings",
+        CASE 
+          WHEN annual_return_rate < 5 THEN 'Low'
+          WHEN annual_return_rate < 8 THEN 'Medium'
+          ELSE 'High'
+        END as "Risk_Tolerance",
+        retirement_age_goal as "Retirement_Age_Goal",
+        annual_return_rate as "Portfolio_Performance",
+        gender,
+        country
+      FROM pension_data 
+      WHERE user_id IS NOT NULL
+      ORDER BY 
+        CASE 
+          WHEN $1 = 'name' THEN user_id
+          WHEN $1 = 'portfolioValue' THEN current_savings::text
+          WHEN $1 = 'riskScore' THEN annual_return_rate::text
+          ELSE user_id
+        END
+      LIMIT $2 OFFSET $3
+    `;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const result = await db.query(query, [sortBy, parseInt(limit), offset]);
+    
+    // Get total count for pagination
+    const countResult = await db.query('SELECT COUNT(*) as total FROM pension_data WHERE user_id IS NOT NULL');
+    const totalClients = parseInt(countResult.rows[0].total);
+    const totalPages = Math.ceil(totalClients / parseInt(limit));
+
+    // Transform data for frontend compatibility
+    const clients = result.rows.map((row, index) => ({
+      ...row,
+      Initials: row.Name ? row.Name.split(' ')[0][0].toUpperCase() : 'U',
+      InitialsColor: ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 'bg-yellow-500'][index % 5],
+      InitialsText: 'text-white'
+    }));
+
+    res.json({
+      success: true,
+      data: clients,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalClients,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Client portfolio error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to retrieve client portfolio'
+    });
+  }
+});
+
 // Health check endpoint
 router.get('/health', (req, res) => {
   res.json({

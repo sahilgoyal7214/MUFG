@@ -49,7 +49,9 @@ export default function TestLoginPage() {
         
         // Test token generation
         addTestResult('Getting JWT token for backend...');
-        const tokenResponse = await fetch('/api/auth/token');        if (tokenResponse.ok) {
+        const tokenResponse = await fetch('/api/auth/token');
+        
+        if (tokenResponse.ok) {
           const tokenData = await tokenResponse.json();
           addTestResult(`✅ JWT Token generated: ${tokenData.token.substring(0, 50)}...`);
           
