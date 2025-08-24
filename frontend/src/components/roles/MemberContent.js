@@ -456,33 +456,34 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
 
 
   const exportToPowerPoint = async () => {
-    if (typeof window === "undefined") return; // ✅ prevent SSR issues
     try {
-      const PptxGenJS = (await import("pptxgenjs")).default;
-      const pptx = new PptxGenJS();
+      const response = await fetch('/api/export/powerpoint', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: data,
+          reportTitle: "Pension Analysis Presentation"
+        }),
+      });
 
-      // Title slide
-      const slide1 = pptx.addSlide();
-      slide1.addText("Pension Analysis Presentation", { x: 1, y: 1, fontSize: 24, bold: true });
-      slide1.addText("Generated Report", { x: 1, y: 2, fontSize: 16 });
-
-      // KPIs slide
-      if (data.length > 0) {
-        const slide2 = pptx.addSlide();
-        slide2.addText("Key Performance Indicators", { x: 1, y: 0.5, fontSize: 20, bold: true });
-
-        const kpiData = [
-          ["Metric", "Value"],
-          ["Total Savings", `$${data[0].current_savings?.toLocaleString() || "N/A"}`],
-          ["Projected Pension", `$${data[0].projected_pension_amount?.toLocaleString() || "N/A"}`],
-          ["Annual Return Rate", `${parseFloat(data[0].annual_return_rate || 0).toFixed(1)}%`],
-          ["Years to Retirement", `${data[0].retirement_age_goal - data[0].age || "N/A"} years`],
-        ];
-
-        slide2.addTable(kpiData, { x: 1, y: 2, w: 8, h: 3 });
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.status}`);
       }
 
-      await pptx.writeFile({ fileName: "Board_Presentation.pptx" });
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'Board_Presentation.pptx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
       addToExportHistory("Board_Presentation.pptx", "5.2 MB", "PPTX");
     } catch (err) {
       console.error("Failed to export PowerPoint:", err);

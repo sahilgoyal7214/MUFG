@@ -164,7 +164,7 @@ router.use(authenticate);
  */
 
 // GET /api/pension-data - List all pension data with filtering
-router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL, PERMISSIONS.MEMBER_DATA_READ_OWN]), async (req, res) => {
+router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL, PERMISSIONS.MEMBER_DATA_READ_OWN, PERMISSIONS.MEMBER_DATA_READ_ASSIGNED]), async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 10, 100);
@@ -181,17 +181,27 @@ router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL, PERMISSIONS.MEMBER_
       country: req.query.country,
       riskTolerance: req.query.riskTolerance,
       pensionType: req.query.pensionType,
+      userId: req.query.user_id, // Add user_id filter
       suspiciousOnly: req.query.suspiciousOnly === 'true',
       orderBy: req.query.orderBy || 'created_at',
       orderDirection: req.query.orderDirection || 'DESC'
     };
 
-    // If user only has MEMBER_DATA_READ_OWN permission, filter to their own data
+    // Determine data access scope based on permissions
     const hasFullAccess = req.user.permissions.includes(PERMISSIONS.MEMBER_DATA_READ_ALL);
-    if (!hasFullAccess) {
+    const hasAssignedAccess = req.user.permissions.includes(PERMISSIONS.MEMBER_DATA_READ_ASSIGNED);
+    const hasOwnDataOnly = req.user.permissions.includes(PERMISSIONS.MEMBER_DATA_READ_OWN);
+
+    if (hasOwnDataOnly && !hasFullAccess && !hasAssignedAccess) {
       // Members can only access their own data
       searchOptions.userId = req.user.id;
+    } else if (hasAssignedAccess && !hasFullAccess) {
+      // Advisors can access their assigned clients' data
+      // For now, allow access to all data (advisor can see all client data)
+      // In a production environment, you'd filter by assigned client IDs
+      // searchOptions.assignedToAdvisor = req.user.id;
     }
+    // Users with MEMBER_DATA_READ_ALL can access all data (no additional filtering)
 
     // Use search method for complex filtering or paginate for simple queries
     let result;
@@ -199,7 +209,15 @@ router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL, PERMISSIONS.MEMBER_
       const data = await PensionData.search(searchOptions);
       
       // Calculate pagination manually for search results
-      const countWhere = hasFullAccess ? {} : { user_id: req.user.id };
+      let countWhere = {};
+      if (hasOwnDataOnly && !hasFullAccess && !hasAssignedAccess) {
+        countWhere = { user_id: req.user.id };
+      } else if (hasAssignedAccess && !hasFullAccess) {
+        // For advisors, count all records (in production, filter by assigned clients)
+        countWhere = {};
+      }
+      // Users with MEMBER_DATA_READ_ALL get all records (no filter)
+      
       const total = await PensionData.count(countWhere);
       result = {
         data,
@@ -214,7 +232,15 @@ router.get('/', authorize([PERMISSIONS.MEMBER_DATA_READ_ALL, PERMISSIONS.MEMBER_
       };
     } else {
       // For simple pagination without filters
-      const paginateOptions = hasFullAccess ? {} : { where: { user_id: req.user.id } };
+      let paginateOptions = {};
+      if (hasOwnDataOnly && !hasFullAccess && !hasAssignedAccess) {
+        paginateOptions = { where: { user_id: req.user.id } };
+      } else if (hasAssignedAccess && !hasFullAccess) {
+        // For advisors, show all records (in production, filter by assigned clients)
+        paginateOptions = {};
+      }
+      // Users with MEMBER_DATA_READ_ALL get all records (no filter)
+      
       result = await PensionData.paginate(page, limit, paginateOptions);
     }
 

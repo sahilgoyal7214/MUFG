@@ -1,5 +1,6 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import jwt from "jsonwebtoken"
 import { userService } from "../../../../lib/userService"
 import initializeDatabase from "../../../../lib/initDb"
 
@@ -69,11 +70,9 @@ const authOptions = {
   jwt: {
     // Force unencrypted JWT instead of encrypted JWE
     encode: async ({ secret, token }) => {
-      const jwt = require('jsonwebtoken');
       return jwt.sign(token, secret);
     },
     decode: async ({ secret, token }) => {
-      const jwt = require('jsonwebtoken');
       try {
         return jwt.verify(token, secret);
       } catch (error) {

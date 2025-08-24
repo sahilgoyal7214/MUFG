@@ -1,6 +1,5 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
@@ -9,6 +8,8 @@ async function createJWT(session) {
   if (!session || !session.user) {
     return null;
   }
+
+  const jwt = await import('jsonwebtoken');
 
   const tokenPayload = {
     sub: session.user.id || session.user.email,
@@ -22,7 +23,7 @@ async function createJWT(session) {
   };
 
   const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
-  return jwt.sign(tokenPayload, JWT_SECRET);
+  return jwt.default.sign(tokenPayload, JWT_SECRET);
 }
 
 export async function GET(request) {

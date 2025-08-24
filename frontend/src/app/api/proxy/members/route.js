@@ -1,8 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { authOptions } from "../../../auth/[...nextauth]/route";
-import jwt from "jsonwebtoken"; // ✅ ESM import
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
@@ -18,7 +17,8 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "Failed to get token" }, { status: 500 });
     }
 
-    const backendToken = jwt.sign({
+    const jwt = await import('jsonwebtoken');
+    const backendToken = jwt.default.sign({
       sub: token.sub,
       email: token.email,
       name: token.name,
@@ -69,7 +69,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "Failed to get token" }, { status: 500 });
     }
 
-    const backendToken = jwt.sign({
+    const jwt = await import('jsonwebtoken');
+    const backendToken = jwt.default.sign({
       sub: token.sub,
       email: token.email,
       name: token.name,
