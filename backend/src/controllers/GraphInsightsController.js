@@ -46,7 +46,7 @@ export class GraphInsightsController {
       };
 
       // Get analysis from LLaVa
-      const analysis = await GraphInsightsService.analyzeGraph(cleanBase64Image);
+      const analysis = await GraphInsightsService.analyzeGraph(cleanBase64Image, analysisContext);
 
       // If there was an error in analysis
       if (!analysis.success) {

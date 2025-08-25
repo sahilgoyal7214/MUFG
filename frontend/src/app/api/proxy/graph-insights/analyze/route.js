@@ -10,6 +10,26 @@ async function createJWT(session) {
     return null;
   }
 
+  // Convert role to permissions using the backend permission format
+  let permissions = [];
+  if (session.user.role === 'advisor') {
+    permissions = [
+      'member_data:read:assigned',
+      'ai:insights:client'  // Required for graph insights
+    ];
+  } else if (session.user.role === 'member') {
+    permissions = [
+      'member_data:read:own',
+      'ai:insights:personal'  // Required for graph insights
+    ];
+  } else if (session.user.role === 'regulator') {
+    permissions = [
+      'member_data:read:all',
+      'analytics:view:all',
+      'ai:insights:client'  // Regulators can view client insights
+    ];
+  }
+
   const tokenPayload = {
     sub: session.user.id || session.user.email,
     email: session.user.email,
@@ -17,6 +37,7 @@ async function createJWT(session) {
     username: session.user.username,
     role: session.user.role || 'member',
     roleData: session.user.roleData || {},
+    permissions: permissions, // Add permissions in correct format
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours
   };
@@ -27,9 +48,14 @@ async function createJWT(session) {
 
 export async function POST(request) {
   try {
+    console.log('🔍 GRAPH-INSIGHTS PROXY: Starting analysis request...');
+    
     const session = await getServerSession(authOptions);
+    console.log('🔍 GRAPH-INSIGHTS PROXY: Session:', session ? 'EXISTS' : 'NULL');
+    console.log('🔍 GRAPH-INSIGHTS PROXY: User role:', session?.user?.role);
     
     if (!session) {
+      console.log('❌ GRAPH-INSIGHTS PROXY: No session found');
       return NextResponse.json(
         { error: { message: "Not authenticated" } },
         { status: 401 }
@@ -37,7 +63,9 @@ export async function POST(request) {
     }
 
     const token = await createJWT(session);
+    console.log('🔍 GRAPH-INSIGHTS PROXY: JWT token created:', token ? 'SUCCESS' : 'FAILED');
     if (!token) {
+      console.log('❌ GRAPH-INSIGHTS PROXY: Failed to create JWT token');
       return NextResponse.json(
         { error: { message: "Failed to generate authentication token" } },
         { status: 500 }
@@ -46,6 +74,8 @@ export async function POST(request) {
 
     // Get request body
     const body = await request.json();
+    console.log('🔍 GRAPH-INSIGHTS PROXY: Request body keys:', Object.keys(body));
+    console.log('🔍 GRAPH-INSIGHTS PROXY: Base64 image length:', body.base64Image?.length || 0);
 
     // Prepare backend request
     const backendUrl = `${BACKEND_URL}/api/graph-insights/analyze`;
@@ -58,15 +88,14 @@ export async function POST(request) {
       body: JSON.stringify(body)
     };
 
-    console.log('Proxying graph insights request to:', backendUrl);
-    console.log('Request body keys:', Object.keys(body));
-    console.log('Base64 image length:', body.base64Image?.length || 0);
+    console.log('🔍 GRAPH-INSIGHTS PROXY: Proxying request to:', backendUrl);
 
     const response = await fetch(backendUrl, options);
+    console.log('🔍 GRAPH-INSIGHTS PROXY: Backend response status:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Backend response error:', response.status, errorText);
+      console.error('❌ GRAPH-INSIGHTS PROXY: Backend error:', response.status, errorText);
       
       let errorData;
       try {
@@ -79,12 +108,13 @@ export async function POST(request) {
     }
 
     const data = await response.json();
-    console.log('Graph insights response received:', data.success ? 'Success' : 'Failed');
+    console.log('🔍 GRAPH-INSIGHTS PROXY: Response received:', data.success ? 'Success' : 'Failed');
 
     return NextResponse.json(data, { status: 200 });
 
   } catch (error) {
-    console.error('Graph insights proxy error:', error);
+    console.error('❌ GRAPH-INSIGHTS PROXY: Error occurred:', error);
+    console.error('❌ GRAPH-INSIGHTS PROXY: Error stack:', error.stack);
     return NextResponse.json(
       { error: { message: "Graph insights service temporarily unavailable" } },
       { status: 500 }

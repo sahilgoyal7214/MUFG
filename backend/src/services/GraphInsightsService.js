@@ -90,9 +90,10 @@ export class GraphInsightsService {
   /**
    * Analyze graph using LLaVa
    * @param {string} base64Image - Base64 encoded image data
+   * @param {Object} context - Context information including user role
    * @returns {Promise<Object>} Analysis results
    */
-  static async analyzeGraph(base64Image) {
+  static async analyzeGraph(base64Image, context = {}) {
     // Input validation
     if (!base64Image) {
       return {
@@ -115,6 +116,7 @@ export class GraphInsightsService {
     try { 
       const startTime = Date.now();
       console.log('🚀 Starting graph analysis at:', new Date().toISOString());
+      console.log('📋 Analysis context:', context);
 
       // Use LLaVa configuration
       const llavaUrl = process.env.GRAPH_LLM_URL || process.env.LOCAL_LLM_URL;
@@ -134,9 +136,52 @@ export class GraphInsightsService {
       const imageBuffer = await fs.promises.readFile(tempFilePath);
       const imageBase64 = imageBuffer.toString('base64');
       
+      // Create role-specific prompts
+      let prompt = '';
+      const userRole = context.userRole || context.role || 'member';
+      
+      if (userRole === 'advisor') {
+        prompt = `You are an expert financial advisor analyzing a pension fund analytics chart. 
+
+Please analyze this pension data visualization and provide exactly 4 key insights that would be most valuable for an advisor managing client portfolios. Focus on:
+
+1. **Portfolio Performance Trends**: What patterns indicate strong or concerning performance?
+2. **Risk Assessment**: Are there any risk indicators or diversification concerns?
+3. **Client Segmentation**: What does the data reveal about different client groups or demographics?
+4. **Actionable Recommendations**: What specific actions should an advisor take based on this data?
+
+Format your response as exactly 4 distinct insights, each starting with a relevant emoji and a clear title. Keep each insight concise but actionable (2-3 sentences max). Focus on practical advisor guidance rather than generic observations.
+
+Example format:
+📈 **Performance Insight**: [specific observation and implication]
+⚠️ **Risk Alert**: [risk factor and recommended action]
+👥 **Client Segmentation**: [demographic or behavioral pattern]
+🎯 **Advisory Action**: [specific recommendation for client management]`;
+      } else {
+        // Member-specific prompt focused on personal financial education and protection
+        prompt = `You are a trusted personal financial advisor analyzing a pension data chart for an individual pension plan member. 
+
+Please analyze this pension visualization and provide exactly 4 key insights that would help a pension member understand their financial situation and protect their interests. Focus on:
+
+1. **Personal Financial Health**: What does this data tell them about their pension progress?
+2. **Risk Awareness**: What potential risks should they be aware of and how to protect themselves?
+3. **Optimization Opportunities**: How can they improve their pension outcomes?
+4. **Next Steps**: What specific actions should they take to secure their financial future?
+
+Write in a supportive, educational tone that empowers the member with knowledge. Avoid jargon and explain concepts clearly. Focus on their personal control and decision-making power.
+
+Format your response as exactly 4 distinct insights, each starting with a relevant emoji and a clear title. Keep each insight encouraging and actionable (2-3 sentences max).
+
+Example format:
+💰 **Your Financial Progress**: [personal assessment and encouragement]
+🛡️ **Protect Your Future**: [risk awareness and protection strategies]
+📊 **Optimization Tip**: [specific improvement opportunity]
+✅ **Action Plan**: [clear next steps they can take]`;
+      }
+      
       const payload = {
         model: modelName,
-        prompt: 'This is a pension fund analytics graph. Please analyze this image and focus on key financial metrics, trends, and insights that would be relevant for pension fund management. What are the main patterns and what do they suggest about fund performance or risk?',
+        prompt: prompt,
         images: [imageBase64],
         stream: false
       };

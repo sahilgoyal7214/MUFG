@@ -1493,24 +1493,28 @@ export default function AdvisorContent({ activeTab, isDark }) {
         textToAnalyze = analysisText.analysis;
       } else if (analysisText.data && analysisText.data.analysis) {
         textToAnalyze = analysisText.data.analysis;
+      } else if (analysisText.data && analysisText.data.data && analysisText.data.data.analysis) {
+        // Handle deeply nested structure from LLM response
+        textToAnalyze = analysisText.data.data.analysis;
       } else if (analysisText.text) {
         textToAnalyze = analysisText.text;
       } else if (analysisText.message) {
         textToAnalyze = analysisText.message;
       } else {
         console.log('🚨 Could not extract text from object, using fallback');
-        return getAIInsights(chart); // Fallback to basic insights
+        return getAIInsights(chart).slice(0, 4); // Limit fallback to 4
       }
     } else {
       console.log('🚨 Invalid analysis format, using fallback');
-      return getAIInsights(chart); // Fallback to basic insights
+      return getAIInsights(chart).slice(0, 4); // Limit fallback to 4
     }
     
     console.log('📝 Text to analyze:', textToAnalyze);
+    console.log('🔍 First 500 chars of AI response:', textToAnalyze.substring(0, 500));
     
     if (!textToAnalyze || textToAnalyze.trim().length === 0) {
       console.log('🚨 Empty text, using fallback');
-      return getAIInsights(chart); // Fallback to basic insights
+      return getAIInsights(chart).slice(0, 4); // Limit fallback to 4
     }
     
     // Split analysis into paragraphs and sentences
@@ -1518,13 +1522,114 @@ export default function AdvisorContent({ activeTab, isDark }) {
     
     console.log('📊 Found paragraphs:', paragraphs.length);
     
-    // First, try to extract numbered insights (1., 2., 3., etc.)
+    // Enhanced pattern matching for the new advisor-specific format
+    const advisorInsightPatterns = [
+      /^(📈|📊)\s*\*\*(.*?)\*\*:?\s*(.*)/i,  // Performance Insight (📈 or 📊)
+      /^(⚠️|💡)\s*\*\*(.*?)\*\*:?\s*(.*)/i,   // Risk Alert/Assessment (⚠️ or 💡)
+      /^(👥|👨‍👩‍👧‍👦)\s*\*\*(.*?)\*\*:?\s*(.*)/i,   // Client Segmentation (👥 or family emoji)
+      /^(🎯|💡)\s*\*\*(.*?)\*\*:?\s*(.*)/i    // Advisory Action (🎯 or 💡)
+    ];
+    
+    // Also try patterns without emojis in case they're not included
+    const alternativePatterns = [
+      /\*\*Performance.*?\*\*:?\s*(.*)/i,
+      /\*\*Risk.*?\*\*:?\s*(.*)/i,
+      /\*\*Client.*?\*\*:?\s*(.*)/i,
+      /\*\*Advisory.*?\*\*:?\s*(.*)/i,
+      /\*\*(.*?Insight.*?)\*\*:?\s*(.*)/i,
+      /\*\*(.*?Assessment.*?)\*\*:?\s*(.*)/i,
+      /\*\*(.*?Segment.*?)\*\*:?\s*(.*)/i,
+      /\*\*(.*?Action.*?)\*\*:?\s*(.*)/i
+    ];
+    
+    // First, try to extract the new advisor-specific format
+    const advisorInsights = [];
+    const usedTitles = new Set(); // Track used titles to avoid duplicates
+    
+    // Try the primary emoji-based patterns first
+    paragraphs.forEach(paragraph => {
+      for (let i = 0; i < advisorInsightPatterns.length; i++) {
+        const match = paragraph.match(advisorInsightPatterns[i]);
+        if (match && advisorInsights.length < 4) {
+          const originalEmoji = match[1];
+          const title = match[2].trim();
+          const text = match[3].trim();
+          
+          // Map to consistent categories and icons
+          const categoryMap = [
+            { icon: '📈', category: 'Performance Analysis' },
+            { icon: '⚠️', category: 'Risk Assessment' },
+            { icon: '👥', category: 'Client Segmentation' },
+            { icon: '🎯', category: 'Advisory Action' }
+          ];
+          
+          const categoryInfo = categoryMap[i] || { icon: '💡', category: 'Analysis' };
+          
+          // Use original title if meaningful, otherwise use category
+          const finalTitle = title.length > 3 && title.length < 30 ? title : categoryInfo.category;
+          
+          // Avoid duplicate titles
+          if (!usedTitles.has(finalTitle.toLowerCase())) {
+            usedTitles.add(finalTitle.toLowerCase());
+            advisorInsights.push({
+              icon: categoryInfo.icon,
+              title: finalTitle,
+              text: text || paragraph.trim()
+            });
+          }
+          break;
+        }
+      }
+    });
+    
+    // If primary patterns didn't work, try alternative patterns
+    if (advisorInsights.length < 3) {
+      paragraphs.forEach(paragraph => {
+        for (let i = 0; i < alternativePatterns.length && advisorInsights.length < 4; i++) {
+          const match = paragraph.match(alternativePatterns[i]);
+          if (match) {
+            const title = match[1] ? match[1].trim() : 'Analysis';
+            const text = match[2] ? match[2].trim() : paragraph.trim();
+            const icons = ['📈', '⚠️', '👥', '🎯'];
+            const categories = ['Performance Analysis', 'Risk Assessment', 'Client Insights', 'Advisory Action'];
+            
+            const finalTitle = title.length > 30 ? categories[Math.floor(i/2)] : title;
+            
+            // Avoid duplicates
+            const isDuplicate = usedTitles.has(finalTitle.toLowerCase()) || 
+              advisorInsights.some(insight => 
+                insight.text.toLowerCase().includes(text.toLowerCase().substring(0, 20)) ||
+                text.toLowerCase().includes(insight.text.toLowerCase().substring(0, 20))
+              );
+            
+            if (!isDuplicate && text.length > 20) {
+              usedTitles.add(finalTitle.toLowerCase());
+              advisorInsights.push({
+                icon: icons[Math.floor(i/2)] || '💡',
+                title: finalTitle,
+                text: text
+              });
+            }
+            break;
+          }
+        }
+      });
+    }
+    
+    console.log('🎯 Found advisor-specific insights:', advisorInsights.length, advisorInsights);
+    
+    // If we found the new format, use it
+    if (advisorInsights.length >= 3) {
+      return advisorInsights.slice(0, 4); // Ensure exactly 4 insights
+    }
+    
+    // Fallback: try to extract numbered insights (1., 2., 3., etc.)
     const numberedInsights = [];
     const numberedPattern = /^\d+\.\s*\*\*(.*?)\*\*:?\s*(.*)/;
     
     paragraphs.forEach(paragraph => {
       const match = paragraph.match(numberedPattern);
-      if (match) {
+      if (match && numberedInsights.length < 4) {
         const title = match[1].trim();
         const text = match[2].trim();
         numberedInsights.push({ title, text, fullText: paragraph.trim() });
@@ -1535,32 +1640,23 @@ export default function AdvisorContent({ activeTab, isDark }) {
     
     // If we found numbered insights, use them
     if (numberedInsights.length >= 3) {
-      numberedInsights.slice(0, 6).forEach((insight, index) => {
+      numberedInsights.slice(0, 4).forEach((insight, index) => {
         let icon = '📊';
         let categoryTitle = insight.title;
         
-        // Map common titles to appropriate icons
-        if (insight.title.toLowerCase().includes('trend') || insight.text.toLowerCase().includes('trend')) {
+        // Map common titles to appropriate icons for advisor context
+        if (insight.title.toLowerCase().includes('performance') || insight.text.toLowerCase().includes('performance')) {
           icon = '📈';
-          categoryTitle = 'Trend Analysis';
-        } else if (insight.title.toLowerCase().includes('y-axis') || insight.title.toLowerCase().includes('data distribution')) {
-          icon = '📊';
-          categoryTitle = 'Data Distribution';
-        } else if (insight.title.toLowerCase().includes('performance') || insight.text.toLowerCase().includes('performance')) {
-          icon = '⚠️';
-          categoryTitle = 'Risk Factors';
+          categoryTitle = 'Performance Analysis';
         } else if (insight.text.toLowerCase().includes('risk') || insight.text.toLowerCase().includes('volatility')) {
           icon = '⚠️';
-          categoryTitle = 'Risk Factors';
-        } else if (insight.text.toLowerCase().includes('recommend') || insight.text.toLowerCase().includes('consider')) {
+          categoryTitle = 'Risk Assessment';
+        } else if (insight.text.toLowerCase().includes('client') || insight.text.toLowerCase().includes('segment')) {
+          icon = '�';
+          categoryTitle = 'Client Insights';
+        } else if (insight.text.toLowerCase().includes('recommend') || insight.text.toLowerCase().includes('action')) {
           icon = '🎯';
-          categoryTitle = 'Recommendations';
-        } else if (insight.title.toLowerCase().includes('insight') || index === 0) {
-          icon = '💡';
-          categoryTitle = 'Key Insights';
-        } else if (insight.text.toLowerCase().includes('return') || insight.text.toLowerCase().includes('financial')) {
-          icon = '💰';
-          categoryTitle = 'Financial Impact';
+          categoryTitle = 'Advisory Recommendations';
         }
         
         insights.push({
@@ -1570,7 +1666,7 @@ export default function AdvisorContent({ activeTab, isDark }) {
         });
       });
       
-      return insights;
+      return insights.slice(0, 4); // Ensure exactly 4 insights
     }
     
     // Fallback to original keyword-based parsing if no numbered insights found

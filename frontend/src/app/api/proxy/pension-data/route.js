@@ -7,42 +7,63 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
 async function proxyRequest(request, method = 'GET') {
   try {
-    const session = await getServerSession(authOptions);
+    console.log('🔍 PENSION-DATA PROXY: Starting request...');
+    console.log('🔍 PENSION-DATA PROXY: Method:', method);
+    console.log('🔍 PENSION-DATA PROXY: URL:', request.url);
     
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    console.log('🔍 PENSION-DATA PROXY: Session:', session ? 'EXISTS' : 'NULL');
+    console.log('🔍 PENSION-DATA PROXY: Session user:', session?.user);
+    
+    if (!session || !session.user) {
+      console.log('❌ PENSION-DATA PROXY: No session found');
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
       );
     }
 
-    // Get the JWT token directly from NextAuth JWE
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
-      return NextResponse.json(
-        { error: "Failed to get token" },
-        { status: 500 }
-      );
+    // Create JWT token using the same method as the working advisor/clients route
+    console.log('🔍 PENSION-DATA PROXY: Creating JWT token...');
+    console.log('🔍 PENSION-DATA PROXY: User role:', session.user.role);
+    
+    // Convert role to permissions using the backend permission format
+    let permissions = [];
+    if (session.user.role === 'advisor') {
+      permissions = ['member_data:read:assigned'];
+    } else if (session.user.role === 'member') {
+      permissions = ['member_data:read:own'];
+    } else if (session.user.role === 'regulator') {
+      permissions = ['member_data:read:all', 'analytics:view:all'];
     }
-
-    // Create a JWT token that the backend expects
-    const jwt = require('jsonwebtoken');
-    const backendToken = jwt.sign({
-      sub: token.sub,
-      email: token.email,
-      name: token.name,
-      username: token.username,
-      role: token.role,
-      roleData: token.roleData,
+    
+    console.log('🔍 PENSION-DATA PROXY: Permissions assigned:', permissions);
+    
+    const tokenPayload = {
+      sub: session.user.id || session.user.email,
+      email: session.user.email,
+      name: session.user.name,
+      username: session.user.username,
+      role: session.user.role || 'member',
+      roleData: session.user.roleData || {},
+      permissions: permissions, // Add permissions in correct format
       iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
-    }, process.env.NEXTAUTH_SECRET);
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours
+    };
+
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+    const jwt = require('jsonwebtoken');
+    const backendToken = jwt.sign(tokenPayload, JWT_SECRET);
+
+    console.log('🔍 PENSION-DATA PROXY: Backend token created (first 50 chars):', backendToken?.substring(0, 50) + '...');
 
     // Extract query parameters and path
     const url = new URL(request.url);
     const pathSegments = url.pathname.split('/api/proxy/pension-data')[1] || '';
     const queryParams = url.searchParams.toString();
     const backendUrl = `${BACKEND_URL}/api/pension-data${pathSegments}${queryParams ? `?${queryParams}` : ''}`;
+
+    console.log('🔍 PENSION-DATA PROXY: Backend URL:', backendUrl);
 
     const options = {
       method,
@@ -60,13 +81,19 @@ async function proxyRequest(request, method = 'GET') {
       }
     }
 
+    console.log('🔍 PENSION-DATA PROXY: Making request to backend...');
     const response = await fetch(backendUrl, options);
+    console.log('🔍 PENSION-DATA PROXY: Backend response status:', response.status);
+    
     const data = await response.json();
+    console.log('🔍 PENSION-DATA PROXY: Backend response data type:', typeof data);
+    console.log('🔍 PENSION-DATA PROXY: Backend response success:', data.success);
 
     return NextResponse.json(data, { status: response.status });
 
   } catch (error) {
-    console.error('Pension data proxy error:', error);
+    console.error('❌ PENSION-DATA PROXY: Error occurred:', error);
+    console.error('❌ PENSION-DATA PROXY: Error stack:', error.stack);
     return NextResponse.json(
       { error: "Proxy request failed" },
       { status: 500 }

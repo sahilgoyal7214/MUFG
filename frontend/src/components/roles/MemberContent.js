@@ -1117,100 +1117,166 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
     
     console.log('📊 Found paragraphs:', paragraphs.length);
     
-    // First, try to extract numbered insights (1., 2., 3., etc.)
-    const numberedInsights = [];
-    const numberedPattern = /^\d+\.\s*\*\*(.*?)\*\*:?\s*(.*)/;
+    // Try multiple extraction patterns to handle various AI response formats
+    const extractedInsights = [];
     
-    paragraphs.forEach(paragraph => {
-      const match = paragraph.match(numberedPattern);
-      if (match) {
-        const title = match[1].trim();
-        const text = match[2].trim();
-        numberedInsights.push({ title, text, fullText: paragraph.trim() });
+    // Pattern 1: Standard emoji patterns (🔸, 📈, 💡, etc. followed by content)
+    const emojiPatterns = [
+      /([🔸📈📊💡⚠️🎯💰🔍📋🔢📌✨🚀⭐🌟💎🎨🛡️📝🎪🎭🎯🏆🎖️🥇🥈🥉])[\s\*]*([^🔸📈📊💡⚠️🎯💰🔍📋🔢📌✨🚀⭐🌟💎🎨🛡️📝🎪🎭🎯🏆🎖️🥇🥈🥉\n]*)/g,
+      // Pattern 2: Numbered insights (1., 2., 3., etc.)
+      /^\d+\.\s*\*\*(.*?)\*\*:?\s*(.*)/,
+      // Pattern 3: Bullet points with **bold** titles
+      /^[-\*]\s*\*\*(.*?)\*\*:?\s*(.*)/,
+      // Pattern 4: Simple **Bold Title**: Content
+      /\*\*(.*?)\*\*:?\s*([^\*\n]+)/g
+    ];
+    
+    // Try each pattern
+    for (const pattern of emojiPatterns) {
+      const matches = [...textToAnalyze.matchAll(pattern)];
+      if (matches.length >= 3) {
+        matches.forEach(match => {
+          const emoji = match[1] || '📊';
+          const content = (match[2] || '').trim();
+          if (content.length > 10) { // Only include substantial content
+            extractedInsights.push({ emoji, content, source: 'pattern' });
+          }
+        });
+        break; // Use first successful pattern
       }
-    });
+    }
     
-    console.log('� Found numbered insights:', numberedInsights.length);
+    // Fallback: Extract from numbered lines if patterns didn't work
+    // Fallback: Extract from numbered lines if patterns didn't work
+    if (extractedInsights.length < 3) {
+      const numberedInsights = [];
+      const numberedPattern = /^\d+\.\s*\*\*(.*?)\*\*:?\s*(.*)/;
+      
+      paragraphs.forEach(paragraph => {
+        const match = paragraph.match(numberedPattern);
+        if (match) {
+          const title = match[1].trim();
+          const text = match[2].trim();
+          numberedInsights.push({ title, text, fullText: paragraph.trim() });
+        }
+      });
+      
+      console.log('🔍 Found numbered insights:', numberedInsights.length);
+      extractedInsights.length = 0; // Clear previous attempts
+      numberedInsights.forEach(insight => {
+        extractedInsights.push({ 
+          emoji: '📊', 
+          content: `**${insight.title}**: ${insight.text}`, 
+          source: 'numbered' 
+        });
+      });
+    }
     
-    // If we found numbered insights, use them
-    if (numberedInsights.length >= 3) {
-      numberedInsights.slice(0, 6).forEach((insight, index) => {
-        let icon = '📊';
-        let categoryTitle = insight.title;
+    console.log('🎯 Extracted insights from patterns:', extractedInsights.length);
+    
+    // If we found substantial insights, process them
+    if (extractedInsights.length >= 3) {
+      // Track used titles to prevent duplicates
+      const usedTitles = new Set();
+      
+      extractedInsights.slice(0, 4).forEach((extractedInsight, index) => {
+        let icon = extractedInsight.emoji || '�';
+        let content = extractedInsight.content;
         
-        // Map common titles to appropriate icons
-        if (insight.title.toLowerCase().includes('trend') || insight.text.toLowerCase().includes('trend')) {
-          icon = '📈';
-          categoryTitle = 'Trend Analysis';
-        } else if (insight.title.toLowerCase().includes('y-axis') || insight.title.toLowerCase().includes('data distribution')) {
-          icon = '📊';
-          categoryTitle = 'Data Distribution';
-        } else if (insight.title.toLowerCase().includes('performance') || insight.text.toLowerCase().includes('performance')) {
-          icon = '⚠️';
-          categoryTitle = 'Risk Factors';
-        } else if (insight.text.toLowerCase().includes('risk') || insight.text.toLowerCase().includes('volatility')) {
-          icon = '⚠️';
-          categoryTitle = 'Risk Factors';
-        } else if (insight.text.toLowerCase().includes('recommend') || insight.text.toLowerCase().includes('consider')) {
-          icon = '🎯';
-          categoryTitle = 'Recommendations';
-        } else if (insight.title.toLowerCase().includes('insight') || index === 0) {
-          icon = '💡';
-          categoryTitle = 'Key Insights';
-        } else if (insight.text.toLowerCase().includes('return') || insight.text.toLowerCase().includes('financial')) {
+        // Extract title if content has a title pattern
+        let title = 'Financial Insights';
+        const titleMatch = content.match(/^\*\*(.*?)\*\*:?\s*(.*)/);
+        if (titleMatch) {
+          const extractedTitle = titleMatch[1].trim();
+          const remainingContent = titleMatch[2].trim();
+          
+          // Check for duplicates and rename if necessary
+          let finalTitle = extractedTitle;
+          let counter = 1;
+          while (usedTitles.has(finalTitle.toLowerCase())) {
+            finalTitle = `${extractedTitle} (${counter + 1})`;
+            counter++;
+          }
+          usedTitles.add(finalTitle.toLowerCase());
+          
+          title = finalTitle;
+          content = remainingContent;
+        }
+        
+        // Map titles to member-appropriate icons and categories
+        if (title.toLowerCase().includes('trend') || content.toLowerCase().includes('trend')) {
+          icon = '💳';
+          title = 'Your Financial Trends';
+        } else if (title.toLowerCase().includes('performance') || content.toLowerCase().includes('performance')) {
           icon = '💰';
-          categoryTitle = 'Financial Impact';
+          title = 'Your Investment Performance';
+        } else if (title.toLowerCase().includes('risk') || content.toLowerCase().includes('volatility')) {
+          icon = '⚠️';
+          title = 'Understanding Your Risk';
+        } else if (content.toLowerCase().includes('recommend') || content.toLowerCase().includes('consider')) {
+          icon = '🎯';
+          // Use different titles for actionable content to avoid duplicates
+          const actionTitles = ['Next Steps for You', 'Your Action Plan', 'Optimization Tips', 'Smart Moves'];
+          const usedActionTitles = Array.from(usedTitles).filter(t => actionTitles.some(at => t.includes(at.toLowerCase())));
+          title = actionTitles[usedActionTitles.length] || 'Your Financial Strategy';
+        } else if (title.toLowerCase().includes('insight') || index === 0) {
+          icon = '💡';
+          title = 'Key Financial Insight';
+        } else if (content.toLowerCase().includes('return') || content.toLowerCase().includes('financial')) {
+          icon = '💰';
+          title = 'Your Financial Health';
         }
         
         insights.push({
           icon: icon,
-          title: categoryTitle,
-          text: insight.text || insight.fullText
+          title: title,
+          text: content
         });
       });
       
-      return insights;
+      // Ensure exactly 4 insights
+      return insights.slice(0, 4);
     }
     
     // Fallback to original keyword-based parsing if no numbered insights found
     
-    // Extract key insights with appropriate icons
+    // Extract key insights with member-appropriate icons and titles
     const insightPatterns = [
       {
         icon: '📈',
-        title: 'Trend Analysis',
+        title: 'Your Financial Trends',
         keywords: ['trend', 'increase', 'decrease', 'growth', 'decline', 'pattern', 'direction'],
-        fallback: 'Analyzing trends in the data visualization.'
+        fallback: 'Understanding trends in your financial data helps you make informed decisions.'
       },
       {
-        icon: '📊',
-        title: 'Data Distribution',
-        keywords: ['distribution', 'spread', 'variance', 'range', 'cluster', 'outlier'],
-        fallback: 'Examining data distribution patterns.'
+        icon: '�',
+        title: 'Your Investment Performance',
+        keywords: ['distribution', 'spread', 'variance', 'range', 'cluster', 'outlier', 'performance'],
+        fallback: 'Examining how your investments are performing across different areas.'
       },
       {
         icon: '💡',
-        title: 'Key Insights',
+        title: 'Key Financial Insight',
         keywords: ['insight', 'notable', 'significant', 'important', 'key', 'observe'],
-        fallback: 'Notable observations from the chart analysis.'
+        fallback: 'Important observations about your financial situation to consider.'
       },
       {
         icon: '⚠️',
-        title: 'Risk Factors',
+        title: 'Understanding Your Risk',
         keywords: ['risk', 'concern', 'warning', 'issue', 'problem', 'volatility'],
-        fallback: 'Potential risk factors identified.'
+        fallback: 'Areas of your portfolio that may need attention or monitoring.'
       },
       {
         icon: '🎯',
-        title: 'Recommendations',
+        title: 'Next Steps for You',
         keywords: ['recommend', 'suggest', 'should', 'consider', 'improve', 'optimize'],
-        fallback: 'Strategic recommendations based on analysis.'
+        fallback: 'Actions you might consider to improve your financial position.'
       },
       {
         icon: '💰',
-        title: 'Financial Impact',
+        title: 'Your Financial Health',
         keywords: ['financial', 'cost', 'benefit', 'value', 'return', 'performance'],
-        fallback: 'Financial performance indicators.'
+        fallback: 'How your investments are contributing to your overall financial wellbeing.'
       }
     ];
 
@@ -1236,7 +1302,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
           title: pattern.title,
           text: bestMatch.trim()
         });
-      } else if (insights.length < 3) {
+      } else if (insights.length < 4) {
         // Add fallback if we don't have enough insights
         insights.push({
           icon: pattern.icon,
@@ -1250,8 +1316,8 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
     if (insights.length < 4) {
       const remainingParagraphs = paragraphs.filter((_, index) => !usedParagraphs.has(index));
       remainingParagraphs.slice(0, 4 - insights.length).forEach((paragraph, index) => {
-        const icons = ['🔍', '📋', '🔢', '📌'];
-        const titles = ['Analysis', 'Summary', 'Data Points', 'Observations'];
+        const icons = ['�', '�', '🎯', '�'];
+        const titles = ['Your Financial Insight', 'Your Trends', 'Next Steps', 'Your Progress'];
         
         insights.push({
           icon: icons[index % icons.length],
@@ -1261,12 +1327,33 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
       });
     }
 
-    // Ensure we have at least some insights
+    // Ensure we have exactly 4 insights with member-focused fallbacks
     if (insights.length === 0) {
-      return getAIInsights(chart);
+      return [
+        {
+          icon: '💡',
+          title: 'Your Financial Health',
+          text: 'Your pension data shows important patterns that can help you make informed decisions about your financial future.'
+        },
+        {
+          icon: '📈',
+          title: 'Understanding Your Trends',
+          text: 'Monitor how your investments change over time to identify opportunities for optimization.'
+        },
+        {
+          icon: '🎯',
+          title: 'Action Steps',
+          text: 'Consider reviewing your investment allocation and consulting with a financial advisor for personalized guidance.'
+        },
+        {
+          icon: '💰',
+          title: 'Your Progress',
+          text: 'Regular monitoring of your pension performance helps ensure you stay on track for your retirement goals.'
+        }
+      ];
     }
 
-    return insights.slice(0, 6); // Limit to 6 insights
+    return insights.slice(0, 4); // Limit to exactly 4 insights
   };
 
   // Function to download the captured chart
