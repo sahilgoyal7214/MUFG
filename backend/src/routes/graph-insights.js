@@ -81,7 +81,7 @@ router.use(authenticate);
  *                       description: AI-generated analysis of the graph
  */
 router.post('/analyze',
-  authorize([PERMISSIONS.AI_INSIGHTS_PERSONAL]),
+  authorize([PERMISSIONS.AI_INSIGHTS_PERSONAL, PERMISSIONS.AI_INSIGHTS_CLIENT]),
   GraphInsightsController.analyzeGraph
 );
 

@@ -319,7 +319,7 @@ export default function Dashboard({ currentUser = 'member', username = 'User', o
 
       {/* Body */}
       <div className="flex flex-1">
-        <Navigation config={config} activeTab={activeTab} onTabChange={handleTabChange} />
+        <Navigation config={config} activeTab={activeTab} onTabChange={handleTabChange} isDark={isDark} />
         <main className="flex-1 overflow-auto p-4 bg-white dark:bg-gray-900">{renderContent()}</main>
       </div>
     </div>

@@ -156,50 +156,31 @@ export class ChatbotService {
     let prompt = `You are a helpful pension advisor assistant for MUFG Pension Insights. `;
     
     if (modelContext?.role) {
+      prompt += `You are responding to a ${modelContext.role}. `;
+      
       if (modelContext.role === 'advisor') {
-        prompt += `You are responding to a pension advisor. `;
         prompt += `You have access to aggregated statistics of all pension members. `;
-        
-        if (pensionData) {
-          prompt += `\nHere is the aggregated pension data context:\n`;
-          prompt += `${JSON.stringify(pensionData, null, 2)}\n\n`;
-        }
-        
-        prompt += `Please provide a comprehensive analysis of the pension data with the following structure:\n`;
-        prompt += `1. Overall Performance Metrics (returns, growth trends)\n`;
-        prompt += `2. Member Demographics and Segmentation\n`;
-        prompt += `3. Investment Patterns and Risk Analysis\n`;
-        prompt += `4. Contribution Behaviors and Trends\n`;
-        prompt += `5. Retirement Readiness Indicators\n`;
-        prompt += `6. Key Areas of Concern\n`;
-        prompt += `7. Recommendations\n\n`;
-        prompt += `Include specific numbers, percentages, and comparative analysis. Break down the data by different member segments where relevant.\n\n`;
-        
       } else {
-        // Member role - individual data only
-        prompt += `You are responding to an individual pension plan member. `;
-        prompt += `You have access to their personal pension data only. `;
-        prompt += `IMPORTANT: Only analyze and discuss the individual member's personal data. `;
-        prompt += `Do NOT mention other members, aggregated statistics, or comparative analysis with other members. `;
-        prompt += `Focus solely on their personal retirement planning.\n\n`;
-        
-        if (pensionData) {
-          prompt += `Here is the member's personal pension data:\n`;
-          prompt += `${JSON.stringify(pensionData, null, 2)}\n\n`;
-        }
-        
-        prompt += `Please provide a personalized analysis focusing ONLY on this member's data:\n`;
-        prompt += `1. Current Financial Position (balance, contributions)\n`;
-        prompt += `2. Investment Performance (personal returns only)\n`;
-        prompt += `3. Retirement Timeline & Goals\n`;
-        prompt += `4. Personal Risk Assessment\n`;
-        prompt += `5. Personalized Recommendations\n\n`;
-        prompt += `Keep the response personal and confidential. Use "your" language and focus only on this individual's pension situation.\n\n`;
+        prompt += `You have access to detailed individual pension data. `;
       }
     }
     
+    if (pensionData) {
+      prompt += `\nHere is the pension data context:\n`;
+      prompt += `${JSON.stringify(pensionData, null, 2)}\n\n`;
+    }
+    
+    prompt += `Please provide a comprehensive analysis of the pension data with the following structure:\n`;
+    prompt += `1. Overall Performance Metrics (returns, growth trends)\n`;
+    prompt += `2. Member Demographics and Segmentation\n`;
+    prompt += `3. Investment Patterns and Risk Analysis\n`;
+    prompt += `4. Contribution Behaviors and Trends\n`;
+    prompt += `5. Retirement Readiness Indicators\n`;
+    prompt += `6. Key Areas of Concern\n`;
+    prompt += `7. Recommendations\n\n`;
+    prompt += `Include specific numbers, percentages, and comparative analysis. Break down the data by different member segments where relevant.\n\n`;
     prompt += `User question: ${message}\n\n`;
-    prompt += `Response: `;
+    prompt += `Response: Here's a detailed analysis:\n`;
     
     return prompt;
   }

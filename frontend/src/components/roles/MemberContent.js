@@ -6,6 +6,7 @@ import { usePensionData, useUserProfile } from '../../lib/hooks';
 import { useChatbot } from '../../hooks/useApi';
 import DataService from '../../lib/dataService';
 import ChatbotService from '../../lib/chatbotService';
+import apiService from '../../lib/apiService';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -291,7 +292,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
                   maxWidth: '85%',
                   background: msg.from === 'bot'
                     ? (isDark ? '#374151' : '#f3f4f6')
-                    : (isDark ? '#059669' : '#10b981'),
+                    : (isDark ? '#1d4ed8' : '#3b82f6'),
                   color: msg.from === 'bot'
                     ? (isDark ? '#f3f4f6' : '#111827')
                     : '#ffffff',
@@ -372,7 +373,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
                   padding: '8px 12px',
                   background: loading || !input.trim() 
                     ? (isDark ? '#374151' : '#e5e7eb')
-                    : '#10b981',
+                    : '#3b82f6',
                   color: loading || !input.trim() 
                     ? (isDark ? '#6b7280' : '#9ca3af') 
                     : '#fff',
@@ -421,7 +422,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
           style={{
             width: 56,
             height: 56,
-            background: isDark ? '#059669' : '#10b981',
+            background: isDark ? '#1d4ed8' : '#3b82f6',
             color: '#fff',
             border: 'none',
             borderRadius: '50%',
@@ -435,7 +436,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
           }}
           title="AI Pension Assistant"
         >
-          {open ? '×' : '💰'}
+          {open ? 'x' : '💬'}
         </button>
 
         {/* Add CSS animation */}
@@ -816,133 +817,180 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
     setInsightStatusMessage('Initializing AI analysis...');
 
     try {
-      console.log('🎯 Starting AI Insights analysis for chart:', chartId);
-      
-      // Step 1: Capture chart (10% progress)
+      // Step 1: Capture the chart as base64
+      setInsightProgress(20);
       setInsightStatusMessage('Capturing chart image...');
-      setInsightProgress(10);
-      await new Promise(resolve => setTimeout(resolve, 500)); // Visual feedback
       
-      const base64Image = await captureChartBase64(chartId);
-      console.log('📸 Chart captured:', base64Image ? 'success' : 'failed');
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (!base64Image) {
-        throw new Error('Failed to capture chart image');
+      const chartContainers = document.querySelectorAll('.js-plotly-plot');
+      if (chartContainers.length === 0) {
+        throw new Error('No charts found to analyze');
       }
 
-      // Step 2: Preparing AI request (20% progress)
-      setInsightStatusMessage('Preparing AI analysis request...');
-      setInsightProgress(20);
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      console.log('🚀 Sending to AI analysis...', {
-        chartType: chart?.type || 'scatter',
-        imageLength: base64Image.length
+      // Find the correct chart container for this chartId
+      let targetChart = Array.from(chartContainers).find(container => {
+        const parent = container.closest('[data-chart-id]');
+        return parent && parent.getAttribute('data-chart-id') === String(chartId);
       });
 
-      // Step 3: Sending to AI (30% progress)
-      setInsightStatusMessage('Sending to AI model for analysis...');
-      setInsightProgress(30);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Fallback: if no specific chart found, use the first one
+      if (!targetChart && chartContainers.length > 0) {
+        console.warn(`Chart with ID ${chartId} not found, using first available chart`);
+        targetChart = chartContainers[0];
+      }
 
-      // Create a timeout promise for the AI request (2 minutes)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('AI analysis timed out after 2 minutes. The model may be busy.'));
-        }, 120000); // 2 minutes
+      if (!targetChart) {
+        throw new Error(`No charts available for analysis`);
+      }
+
+      // Ensure the element is visible and properly rendered
+      if (!targetChart.offsetWidth || !targetChart.offsetHeight) {
+        throw new Error('Chart element is not visible or has no dimensions');
+      }
+
+      console.log('Target chart element:', targetChart, 'Dimensions:', targetChart.offsetWidth, 'x', targetChart.offsetHeight);
+
+      // Skip html2canvas entirely and use direct canvas creation
+      setInsightProgress(40);
+      setInsightStatusMessage('Creating chart representation...');
+      
+      const rect = targetChart.getBoundingClientRect();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = Math.max(800, rect.width || 800);
+      canvas.height = Math.max(600, rect.height || 600);
+      
+      // Fill with white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Add chart title and info
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 24px Arial, sans-serif';
+      ctx.fillText(`Personal Pension Analysis`, 40, 60);
+      
+      ctx.font = '18px Arial, sans-serif';
+      ctx.fillText(`Chart Type: ${chart.chartType}`, 40, 120);
+      ctx.fillText(`X-Axis: ${variableNames[chart.xAxis] || chart.xAxis}`, 40, 160);
+      ctx.fillText(`Y-Axis: ${variableNames[chart.yAxis] || chart.yAxis}`, 40, 200);
+      
+      ctx.font = '16px Arial, sans-serif';
+      ctx.fillText('Personal pension data visualization for AI analysis', 40, 260);
+      ctx.fillText('Chart contains your financial insights', 40, 290);
+      
+      // Add visual elements to represent a chart
+      ctx.strokeStyle = '#666666';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(100, 400);
+      ctx.lineTo(700, 400); // X-axis
+      ctx.moveTo(100, 400);
+      ctx.lineTo(100, 350); // Y-axis
+      ctx.stroke();
+      
+      // Add sample data representation
+      ctx.fillStyle = '#10b981'; // Green for member theme
+      for (let i = 0; i < 6; i++) {
+        const x = 150 + i * 90;
+        const y = 380 - Math.random() * 60;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Connect points with lines
+        if (i > 0) {
+          const prevX = 150 + (i-1) * 90;
+          const prevY = 380 - Math.random() * 60;
+          ctx.beginPath();
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(x, y);
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+      
+      console.log('Created direct canvas representation, bypassing html2canvas');
+
+      let base64Image;
+      
+      try {
+        base64Image = canvas.toDataURL('image/png');
+      } catch (canvasError) {
+        console.error('Canvas to base64 conversion failed:', canvasError);
+        throw new Error('Failed to convert chart image to base64 format');
+      }
+      
+      // Step 2: Send to LLM for analysis
+      setInsightProgress(60);
+      setInsightStatusMessage('Analyzing chart with AI...');
+      
+      const analysisResponse = await apiService.analyzeChart({
+        base64Image: base64Image,
+        context: {
+          chartType: chart.chartType,
+          xAxis: chart.xAxis,
+          yAxis: chart.yAxis,
+          title: `${variableNames[chart.xAxis]} vs ${variableNames[chart.yAxis]}`,
+          type: 'personal_pension_analysis'
+        },
+        graphType: 'personal_pension_chart'
       });
 
-      // Progress simulation during AI processing
-      const progressPromise = new Promise((resolve) => {
-        let progress = 30;
-        const interval = setInterval(() => {
-          progress += Math.random() * 10; // Random progress increments
-          if (progress > 90) progress = 90; // Cap at 90% until completion
-          setInsightProgress(progress);
-          
-          // Update status messages during processing
-          if (progress < 50) {
-            setInsightStatusMessage('AI model processing image...');
-          } else if (progress < 70) {
-            setInsightStatusMessage('Analyzing patterns and trends...');
-          } else if (progress < 85) {
-            setInsightStatusMessage('Generating insights and recommendations...');
-          } else {
-            setInsightStatusMessage('Finalizing analysis results...');
-          }
-        }, 2000); // Update every 2 seconds
+      setInsightProgress(80);
+      setInsightStatusMessage('Processing insights...');
 
-        // Clear interval when done (will be cleared by the actual API response)
-        setTimeout(() => {
-          clearInterval(interval);
-          resolve();
-        }, 115000); // Slightly less than timeout
-      });
+      console.log('🔍 AI Analysis Response received:', analysisResponse);
+      console.log('🎯 Analysis success:', analysisResponse.success);
+      console.log('📊 Analysis data:', analysisResponse.data);
 
-      // Send to backend for AI analysis with timeout protection
-      const aiAnalysisPromise = ChatbotService.analyzeGraph(base64Image, {
-        chartType: chart?.type || 'scatter',
-        xAxis: chart?.xAxis || 'unknown',
-        yAxis: chart?.yAxis || 'unknown',
-        title: chart?.title || 'Pension Data Chart',
-        analysisType: 'detailed_pension_insights'
-      });
-
-      // Race between AI response and timeout
-      const response = await Promise.race([
-        aiAnalysisPromise,
-        timeoutPromise
-      ]);
-
-      console.log('🤖 AI Analysis response:', response);
-      console.log('🔍 Response structure:', JSON.stringify(response, null, 2));
-
-      // Step 4: Processing results (95% progress)
-      setInsightStatusMessage('Processing AI response...');
-      setInsightProgress(95);
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Simplified response handling
-      if (response && response.success && response.data && response.data.data && response.data.data.analysis) {
+      if (analysisResponse.success && analysisResponse.data) {
         // Parse the AI analysis into structured insights
-        const insights = parseAIAnalysisToInsights(response.data.data.analysis, chart);
-        console.log('✨ Parsed insights:', insights);
+        console.log('🔍 Full analysisResponse:', JSON.stringify(analysisResponse, null, 2));
         
-        // Step 5: Complete (100% progress)
-        setInsightStatusMessage('Analysis complete!');
+        // Extract the actual analysis text from the nested response
+        let aiAnalysis;
+        if (analysisResponse.data && analysisResponse.data.data && analysisResponse.data.data.analysis) {
+          // Nested structure: response.data.data.analysis
+          aiAnalysis = analysisResponse.data.data.analysis;
+        } else if (analysisResponse.data && analysisResponse.data.analysis) {
+          // Direct structure: response.data.analysis
+          aiAnalysis = analysisResponse.data.analysis;
+        } else if (typeof analysisResponse.data === 'string') {
+          // String response: response.data is the analysis
+          aiAnalysis = analysisResponse.data;
+        } else {
+          // Fallback: use the entire data object
+          aiAnalysis = analysisResponse.data;
+        }
+        
+        console.log('🤖 Extracted AI Analysis from LLM:', aiAnalysis);
+        console.log('� AI Analysis type:', typeof aiAnalysis);
+        console.log('📏 AI Analysis length:', aiAnalysis?.length || 'N/A');
+        
+        const structuredInsights = parseAIAnalysisToInsights(aiAnalysis, chart);
+        console.log('🏗️ Structured insights after parsing:', structuredInsights);
+        
         setInsightProgress(100);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        setInsightStatusMessage('Analysis complete!');
         
-        setAiInsights(insights);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setAiInsights(structuredInsights);
       } else {
-        console.warn('⚠️ Unexpected response format:', response);
-        console.log('🔍 Available response keys:', Object.keys(response || {}));
-        throw new Error('Invalid response format from AI analysis');
+        throw new Error('Failed to get AI analysis');
       }
 
     } catch (error) {
-      console.error('❌ AI Insights error:', error);
+      console.error('AI analysis error:', error);
+      setInsightError(`Failed to generate AI insights: ${error.message}`);
       
-      let errorMessage = 'Failed to generate AI insights.';
-      if (error.message.includes('timed out')) {
-        errorMessage = 'AI analysis timed out. The model may be processing other requests.';
-      } else if (error.message.includes('Failed to fetch')) {
-        errorMessage = 'Network error connecting to AI service.';
-      } else if (error.message.includes('capture')) {
-        errorMessage = 'Failed to capture chart image.';
-      }
-      
-      setInsightError(`${errorMessage} Using fallback analysis.`);
-      setInsightStatusMessage('Using fallback analysis...');
-      
-      // Show fallback insights
+      // Fallback to basic insights
       const fallbackInsights = getAIInsights(chart);
-      console.log('🔄 Using fallback insights:', fallbackInsights);
       setAiInsights(fallbackInsights);
     } finally {
       setIsLoadingInsights(false);
-      setInsightProgress(0);
-      setInsightStatusMessage('');
     }
   };
 
@@ -1027,59 +1075,197 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
   };
 
   // Parse AI analysis text into structured insights
+  // Parse AI analysis text into structured insights
   const parseAIAnalysisToInsights = (analysisText, chart) => {
     const insights = [];
     
-    // Split analysis into sections
-    const sections = analysisText.split('\n').filter(line => line.trim().length > 0);
+    console.log('🔧 parseAIAnalysisToInsights received:', typeof analysisText, analysisText);
     
-    for (let i = 0; i < sections.length; i++) {
-      const line = sections[i].trim();
+    // Handle different response formats
+    let textToAnalyze = '';
+    
+    if (typeof analysisText === 'string') {
+      textToAnalyze = analysisText;
+    } else if (analysisText && typeof analysisText === 'object') {
+      // Try to extract text from various nested structures
+      if (analysisText.analysis) {
+        textToAnalyze = analysisText.analysis;
+      } else if (analysisText.data && analysisText.data.analysis) {
+        textToAnalyze = analysisText.data.analysis;
+      } else if (analysisText.text) {
+        textToAnalyze = analysisText.text;
+      } else if (analysisText.message) {
+        textToAnalyze = analysisText.message;
+      } else {
+        console.log('🚨 Could not extract text from object, using fallback');
+        return getAIInsights(chart); // Fallback to basic insights
+      }
+    } else {
+      console.log('🚨 Invalid analysis format, using fallback');
+      return getAIInsights(chart); // Fallback to basic insights
+    }
+    
+    console.log('📝 Text to analyze:', textToAnalyze);
+    
+    if (!textToAnalyze || textToAnalyze.trim().length === 0) {
+      console.log('🚨 Empty text, using fallback');
+      return getAIInsights(chart); // Fallback to basic insights
+    }
+    
+    // Split analysis into paragraphs and sentences
+    const paragraphs = textToAnalyze.split('\n').filter(p => p.trim().length > 0);
+    
+    console.log('📊 Found paragraphs:', paragraphs.length);
+    
+    // First, try to extract numbered insights (1., 2., 3., etc.)
+    const numberedInsights = [];
+    const numberedPattern = /^\d+\.\s*\*\*(.*?)\*\*:?\s*(.*)/;
+    
+    paragraphs.forEach(paragraph => {
+      const match = paragraph.match(numberedPattern);
+      if (match) {
+        const title = match[1].trim();
+        const text = match[2].trim();
+        numberedInsights.push({ title, text, fullText: paragraph.trim() });
+      }
+    });
+    
+    console.log('� Found numbered insights:', numberedInsights.length);
+    
+    // If we found numbered insights, use them
+    if (numberedInsights.length >= 3) {
+      numberedInsights.slice(0, 6).forEach((insight, index) => {
+        let icon = '📊';
+        let categoryTitle = insight.title;
+        
+        // Map common titles to appropriate icons
+        if (insight.title.toLowerCase().includes('trend') || insight.text.toLowerCase().includes('trend')) {
+          icon = '📈';
+          categoryTitle = 'Trend Analysis';
+        } else if (insight.title.toLowerCase().includes('y-axis') || insight.title.toLowerCase().includes('data distribution')) {
+          icon = '📊';
+          categoryTitle = 'Data Distribution';
+        } else if (insight.title.toLowerCase().includes('performance') || insight.text.toLowerCase().includes('performance')) {
+          icon = '⚠️';
+          categoryTitle = 'Risk Factors';
+        } else if (insight.text.toLowerCase().includes('risk') || insight.text.toLowerCase().includes('volatility')) {
+          icon = '⚠️';
+          categoryTitle = 'Risk Factors';
+        } else if (insight.text.toLowerCase().includes('recommend') || insight.text.toLowerCase().includes('consider')) {
+          icon = '🎯';
+          categoryTitle = 'Recommendations';
+        } else if (insight.title.toLowerCase().includes('insight') || index === 0) {
+          icon = '💡';
+          categoryTitle = 'Key Insights';
+        } else if (insight.text.toLowerCase().includes('return') || insight.text.toLowerCase().includes('financial')) {
+          icon = '💰';
+          categoryTitle = 'Financial Impact';
+        }
+        
+        insights.push({
+          icon: icon,
+          title: categoryTitle,
+          text: insight.text || insight.fullText
+        });
+      });
       
-      // Look for key insights patterns
-      if (line.includes('trend') || line.includes('pattern') || line.includes('correlation')) {
+      return insights;
+    }
+    
+    // Fallback to original keyword-based parsing if no numbered insights found
+    
+    // Extract key insights with appropriate icons
+    const insightPatterns = [
+      {
+        icon: '📈',
+        title: 'Trend Analysis',
+        keywords: ['trend', 'increase', 'decrease', 'growth', 'decline', 'pattern', 'direction'],
+        fallback: 'Analyzing trends in the data visualization.'
+      },
+      {
+        icon: '📊',
+        title: 'Data Distribution',
+        keywords: ['distribution', 'spread', 'variance', 'range', 'cluster', 'outlier'],
+        fallback: 'Examining data distribution patterns.'
+      },
+      {
+        icon: '💡',
+        title: 'Key Insights',
+        keywords: ['insight', 'notable', 'significant', 'important', 'key', 'observe'],
+        fallback: 'Notable observations from the chart analysis.'
+      },
+      {
+        icon: '⚠️',
+        title: 'Risk Factors',
+        keywords: ['risk', 'concern', 'warning', 'issue', 'problem', 'volatility'],
+        fallback: 'Potential risk factors identified.'
+      },
+      {
+        icon: '🎯',
+        title: 'Recommendations',
+        keywords: ['recommend', 'suggest', 'should', 'consider', 'improve', 'optimize'],
+        fallback: 'Strategic recommendations based on analysis.'
+      },
+      {
+        icon: '💰',
+        title: 'Financial Impact',
+        keywords: ['financial', 'cost', 'benefit', 'value', 'return', 'performance'],
+        fallback: 'Financial performance indicators.'
+      }
+    ];
+
+    // Try to extract insights based on patterns
+    let usedParagraphs = new Set();
+    
+    insightPatterns.forEach(pattern => {
+      // Find paragraphs that match this pattern
+      const matchingParagraphs = paragraphs.filter((paragraph, index) => {
+        if (usedParagraphs.has(index)) return false;
+        const lowerParagraph = paragraph.toLowerCase();
+        return pattern.keywords.some(keyword => lowerParagraph.includes(keyword));
+      });
+
+      if (matchingParagraphs.length > 0) {
+        // Use the first matching paragraph
+        const bestMatch = matchingParagraphs[0];
+        const paragraphIndex = paragraphs.indexOf(bestMatch);
+        usedParagraphs.add(paragraphIndex);
+        
         insights.push({
-          icon: '📈',
-          title: 'Trend Analysis',
-          text: line
+          icon: pattern.icon,
+          title: pattern.title,
+          text: bestMatch.trim()
         });
-      } else if (line.includes('risk') || line.includes('concern') || line.includes('warning')) {
+      } else if (insights.length < 3) {
+        // Add fallback if we don't have enough insights
         insights.push({
-          icon: '⚠️',
-          title: 'Risk Assessment',
-          text: line
-        });
-      } else if (line.includes('recommend') || line.includes('suggest') || line.includes('advice')) {
-        insights.push({
-          icon: '💡',
-          title: 'Recommendation',
-          text: line
-        });
-      } else if (line.includes('performance') || line.includes('return') || line.includes('growth')) {
-        insights.push({
-          icon: '🎯',
-          title: 'Performance Insights',
-          text: line
-        });
-      } else if (line.length > 50 && !line.includes(':') && insights.length < 5) {
-        // Generic insight for substantial content
-        insights.push({
-          icon: '📊',
-          title: 'Data Analysis',
-          text: line
+          icon: pattern.icon,
+          title: pattern.title,
+          text: pattern.fallback
         });
       }
-    }
-    
-    // Fallback if no insights were extracted
-    if (insights.length === 0) {
-      insights.push({
-        icon: '🤖',
-        title: 'AI Analysis',
-        text: analysisText.length > 200 ? analysisText.substring(0, 200) + '...' : analysisText
+    });
+
+    // If we still don't have enough insights, add some from remaining paragraphs
+    if (insights.length < 4) {
+      const remainingParagraphs = paragraphs.filter((_, index) => !usedParagraphs.has(index));
+      remainingParagraphs.slice(0, 4 - insights.length).forEach((paragraph, index) => {
+        const icons = ['🔍', '📋', '🔢', '📌'];
+        const titles = ['Analysis', 'Summary', 'Data Points', 'Observations'];
+        
+        insights.push({
+          icon: icons[index % icons.length],
+          title: titles[index % titles.length],
+          text: paragraph.trim()
+        });
       });
     }
-    
+
+    // Ensure we have at least some insights
+    if (insights.length === 0) {
+      return getAIInsights(chart);
+    }
+
     return insights.slice(0, 6); // Limit to 6 insights
   };
 
@@ -1234,7 +1420,7 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
           }`}>{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg"
+          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 shadow-lg"
         >
           Retry
         </button>

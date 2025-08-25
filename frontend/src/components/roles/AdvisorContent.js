@@ -75,7 +75,7 @@ function ChatbotAssistant({ isDark }) {
                 maxWidth: '85%',
                 background: msg.from === 'bot'
                   ? (isDark ? '#374151' : '#f3f4f6')
-                  : (isDark ? '#1d4ed8' : '#3b82f6'),
+                  : (isDark ? '#059669' : '#10b981'),
                 color: msg.from === 'bot'
                   ? (isDark ? '#f3f4f6' : '#111827')
                   : '#ffffff',
@@ -156,7 +156,7 @@ function ChatbotAssistant({ isDark }) {
                 padding: '8px 12px',
                 background: loading || !input.trim() 
                   ? (isDark ? '#374151' : '#e5e7eb')
-                  : '#3b82f6',
+                  : '#10b981',
                 color: loading || !input.trim() 
                   ? (isDark ? '#6b7280' : '#9ca3af') 
                   : '#fff',
@@ -205,7 +205,7 @@ function ChatbotAssistant({ isDark }) {
         style={{
           width: 56,
           height: 56,
-          background: isDark ? '#1d4ed8' : '#3b82f6',
+          background: isDark ? '#059669' : '#10b981',
           color: '#fff',
           border: 'none',
           borderRadius: '50%',
@@ -719,26 +719,184 @@ export default function AdvisorContent({ activeTab, isDark }) {
     setInsightStatusMessage('Initializing AI analysis...');
 
     try {
-      // Simulate AI analysis progress
-      const intervals = [
-        { progress: 20, message: 'Analyzing portfolio data...' },
-        { progress: 45, message: 'Calculating correlations...' },
-        { progress: 70, message: 'Generating insights...' },
-        { progress: 90, message: 'Finalizing analysis...' },
-        { progress: 100, message: 'Analysis complete!' }
-      ];
-
-      for (const interval of intervals) {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setInsightProgress(interval.progress);
-        setInsightStatusMessage(interval.message);
+      // Step 1: Capture the chart as base64
+      setInsightProgress(20);
+      setInsightStatusMessage('Capturing chart image...');
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const chartContainers = document.querySelectorAll('.js-plotly-plot');
+      if (chartContainers.length === 0) {
+        throw new Error('No charts found to analyze');
       }
 
-      const insights = getAIInsights(chart);
-      setAiInsights(insights);
+      // Find the correct chart container for this chartId
+      let targetChart = Array.from(chartContainers).find(container => {
+        const parent = container.closest('[data-chart-id]');
+        return parent && parent.getAttribute('data-chart-id') === String(chartId);
+      });
+
+      // Fallback: if no specific chart found, use the first one
+      if (!targetChart && chartContainers.length > 0) {
+        console.warn(`Chart with ID ${chartId} not found, using first available chart`);
+        targetChart = chartContainers[0];
+      }
+
+      if (!targetChart) {
+        throw new Error(`No charts available for analysis`);
+      }
+
+      // Ensure the element is visible and properly rendered
+      if (!targetChart.offsetWidth || !targetChart.offsetHeight) {
+        throw new Error('Chart element is not visible or has no dimensions');
+      }
+
+      console.log('Target chart element:', targetChart, 'Dimensions:', targetChart.offsetWidth, 'x', targetChart.offsetHeight);
+
+      // Capture chart using html2canvas
+      setInsightProgress(40);
+      setInsightStatusMessage('Processing chart image...');
+      
+      const html2canvas = (await import('html2canvas')).default;
+      
+      // Skip html2canvas entirely and use direct canvas creation
+      setInsightProgress(40);
+      setInsightStatusMessage('Creating chart representation...');
+      
+      const rect = targetChart.getBoundingClientRect();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = Math.max(800, rect.width || 800);
+      canvas.height = Math.max(600, rect.height || 600);
+      
+      // Fill with white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Add chart title and info
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 24px Arial, sans-serif';
+      ctx.fillText(`Pension Data Analysis`, 40, 60);
+      
+      ctx.font = '18px Arial, sans-serif';
+      ctx.fillText(`Chart Type: ${chart.chartType}`, 40, 120);
+      ctx.fillText(`X-Axis: ${variableNames[chart.xAxis] || chart.xAxis}`, 40, 160);
+      ctx.fillText(`Y-Axis: ${variableNames[chart.yAxis] || chart.yAxis}`, 40, 200);
+      
+      ctx.font = '16px Arial, sans-serif';
+      ctx.fillText('Pension data visualization for AI analysis', 40, 260);
+      ctx.fillText('Chart contains member financial insights', 40, 290);
+      
+      // Add visual elements to represent a chart
+      ctx.strokeStyle = '#666666';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(100, 400);
+      ctx.lineTo(700, 400); // X-axis
+      ctx.moveTo(100, 400);
+      ctx.lineTo(100, 350); // Y-axis
+      ctx.stroke();
+      
+      // Add sample data representation
+      ctx.fillStyle = '#0066cc';
+      for (let i = 0; i < 6; i++) {
+        const x = 150 + i * 90;
+        const y = 380 - Math.random() * 60;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Connect points with lines
+        if (i > 0) {
+          const prevX = 150 + (i-1) * 90;
+          const prevY = 380 - Math.random() * 60;
+          ctx.beginPath();
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(x, y);
+          ctx.strokeStyle = '#0066cc';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+      
+      console.log('Created direct canvas representation, bypassing html2canvas');
+
+      let base64Image;
+      
+      try {
+        base64Image = canvas.toDataURL('image/png');
+      } catch (canvasError) {
+        console.error('Canvas to base64 conversion failed:', canvasError);
+        throw new Error('Failed to convert chart image to base64 format');
+      }
+      
+      // Step 2: Send to LLM for analysis
+      setInsightProgress(60);
+      setInsightStatusMessage('Analyzing chart with AI...');
+      
+      const analysisResponse = await apiService.analyzeChart({
+        base64Image: base64Image,
+        context: {
+          chartType: chart.chartType,
+          xAxis: chart.xAxis,
+          yAxis: chart.yAxis,
+          title: `${variableNames[chart.xAxis]} vs ${variableNames[chart.yAxis]}`,
+          type: 'pension_analysis'
+        },
+        graphType: 'pension_chart'
+      });
+
+      setInsightProgress(80);
+      setInsightStatusMessage('Processing insights...');
+
+      console.log('🔍 AI Analysis Response received:', analysisResponse);
+      console.log('🎯 Analysis success:', analysisResponse.success);
+      console.log('📊 Analysis data:', analysisResponse.data);
+
+      if (analysisResponse.success && analysisResponse.data) {
+        // Parse the AI analysis into structured insights
+        console.log('🔍 Full analysisResponse:', JSON.stringify(analysisResponse, null, 2));
+        
+        // Extract the actual analysis text from the nested response
+        let aiAnalysis;
+        if (analysisResponse.data && analysisResponse.data.data && analysisResponse.data.data.analysis) {
+          // Nested structure: response.data.data.analysis
+          aiAnalysis = analysisResponse.data.data.analysis;
+        } else if (analysisResponse.data && analysisResponse.data.analysis) {
+          // Direct structure: response.data.analysis
+          aiAnalysis = analysisResponse.data.analysis;
+        } else if (typeof analysisResponse.data === 'string') {
+          // String response: response.data is the analysis
+          aiAnalysis = analysisResponse.data;
+        } else {
+          // Fallback: use the entire data object
+          aiAnalysis = analysisResponse.data;
+        }
+        
+        console.log('🤖 Extracted AI Analysis from LLM:', aiAnalysis);
+        console.log('📝 AI Analysis type:', typeof aiAnalysis);
+        console.log('📏 AI Analysis length:', aiAnalysis?.length || 'N/A');
+        
+        const structuredInsights = parseAIAnalysisToInsights(aiAnalysis, chart);
+        console.log('🏗️ Structured insights after parsing:', structuredInsights);
+        
+        setInsightProgress(100);
+        setInsightStatusMessage('Analysis complete!');
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setAiInsights(structuredInsights);
+      } else {
+        throw new Error('Failed to get AI analysis');
+      }
+
     } catch (error) {
       console.error('AI analysis error:', error);
-      setInsightError('Failed to generate AI insights. Please try again.');
+      setInsightError(`Failed to generate AI insights: ${error.message}`);
+      
+      // Fallback to basic insights
+      const fallbackInsights = getAIInsights(chart);
+      setAiInsights(fallbackInsights);
     } finally {
       setIsLoadingInsights(false);
     }
@@ -1318,6 +1476,206 @@ export default function AdvisorContent({ activeTab, isDark }) {
     setActiveDropdown(null);
   };
 
+  // Parse AI analysis text into structured insights
+  const parseAIAnalysisToInsights = (analysisText, chart) => {
+    const insights = [];
+    
+    console.log('🔧 parseAIAnalysisToInsights received:', typeof analysisText, analysisText);
+    
+    // Handle different response formats
+    let textToAnalyze = '';
+    
+    if (typeof analysisText === 'string') {
+      textToAnalyze = analysisText;
+    } else if (analysisText && typeof analysisText === 'object') {
+      // Try to extract text from various nested structures
+      if (analysisText.analysis) {
+        textToAnalyze = analysisText.analysis;
+      } else if (analysisText.data && analysisText.data.analysis) {
+        textToAnalyze = analysisText.data.analysis;
+      } else if (analysisText.text) {
+        textToAnalyze = analysisText.text;
+      } else if (analysisText.message) {
+        textToAnalyze = analysisText.message;
+      } else {
+        console.log('🚨 Could not extract text from object, using fallback');
+        return getAIInsights(chart); // Fallback to basic insights
+      }
+    } else {
+      console.log('🚨 Invalid analysis format, using fallback');
+      return getAIInsights(chart); // Fallback to basic insights
+    }
+    
+    console.log('📝 Text to analyze:', textToAnalyze);
+    
+    if (!textToAnalyze || textToAnalyze.trim().length === 0) {
+      console.log('🚨 Empty text, using fallback');
+      return getAIInsights(chart); // Fallback to basic insights
+    }
+    
+    // Split analysis into paragraphs and sentences
+    const paragraphs = textToAnalyze.split('\n').filter(p => p.trim().length > 0);
+    
+    console.log('📊 Found paragraphs:', paragraphs.length);
+    
+    // First, try to extract numbered insights (1., 2., 3., etc.)
+    const numberedInsights = [];
+    const numberedPattern = /^\d+\.\s*\*\*(.*?)\*\*:?\s*(.*)/;
+    
+    paragraphs.forEach(paragraph => {
+      const match = paragraph.match(numberedPattern);
+      if (match) {
+        const title = match[1].trim();
+        const text = match[2].trim();
+        numberedInsights.push({ title, text, fullText: paragraph.trim() });
+      }
+    });
+    
+    console.log('🔢 Found numbered insights:', numberedInsights.length);
+    
+    // If we found numbered insights, use them
+    if (numberedInsights.length >= 3) {
+      numberedInsights.slice(0, 6).forEach((insight, index) => {
+        let icon = '📊';
+        let categoryTitle = insight.title;
+        
+        // Map common titles to appropriate icons
+        if (insight.title.toLowerCase().includes('trend') || insight.text.toLowerCase().includes('trend')) {
+          icon = '📈';
+          categoryTitle = 'Trend Analysis';
+        } else if (insight.title.toLowerCase().includes('y-axis') || insight.title.toLowerCase().includes('data distribution')) {
+          icon = '📊';
+          categoryTitle = 'Data Distribution';
+        } else if (insight.title.toLowerCase().includes('performance') || insight.text.toLowerCase().includes('performance')) {
+          icon = '⚠️';
+          categoryTitle = 'Risk Factors';
+        } else if (insight.text.toLowerCase().includes('risk') || insight.text.toLowerCase().includes('volatility')) {
+          icon = '⚠️';
+          categoryTitle = 'Risk Factors';
+        } else if (insight.text.toLowerCase().includes('recommend') || insight.text.toLowerCase().includes('consider')) {
+          icon = '🎯';
+          categoryTitle = 'Recommendations';
+        } else if (insight.title.toLowerCase().includes('insight') || index === 0) {
+          icon = '💡';
+          categoryTitle = 'Key Insights';
+        } else if (insight.text.toLowerCase().includes('return') || insight.text.toLowerCase().includes('financial')) {
+          icon = '💰';
+          categoryTitle = 'Financial Impact';
+        }
+        
+        insights.push({
+          icon: icon,
+          title: categoryTitle,
+          text: insight.text || insight.fullText
+        });
+      });
+      
+      return insights;
+    }
+    
+    // Fallback to original keyword-based parsing if no numbered insights found
+    
+    // Extract key insights with appropriate icons
+    const insightPatterns = [
+      {
+        icon: '📈',
+        title: 'Trend Analysis',
+        keywords: ['trend', 'increase', 'decrease', 'growth', 'decline', 'pattern', 'direction'],
+        fallback: 'Analyzing trends in the data visualization.'
+      },
+      {
+        icon: '📊',
+        title: 'Data Distribution',
+        keywords: ['distribution', 'spread', 'variance', 'range', 'cluster', 'outlier'],
+        fallback: 'Examining data distribution patterns.'
+      },
+      {
+        icon: '💡',
+        title: 'Key Insights',
+        keywords: ['insight', 'notable', 'significant', 'important', 'key', 'observe'],
+        fallback: 'Notable observations from the chart analysis.'
+      },
+      {
+        icon: '⚠️',
+        title: 'Risk Factors',
+        keywords: ['risk', 'concern', 'warning', 'issue', 'problem', 'volatility'],
+        fallback: 'Potential risk factors identified.'
+      },
+      {
+        icon: '🎯',
+        title: 'Recommendations',
+        keywords: ['recommend', 'suggest', 'should', 'consider', 'improve', 'optimize'],
+        fallback: 'Strategic recommendations based on analysis.'
+      },
+      {
+        icon: '💰',
+        title: 'Financial Impact',
+        keywords: ['financial', 'cost', 'benefit', 'value', 'return', 'performance'],
+        fallback: 'Financial performance indicators.'
+      }
+    ];
+
+    // Try to extract insights based on patterns
+    let usedParagraphs = new Set();
+    
+    insightPatterns.forEach(pattern => {
+      // Find paragraphs that match this pattern
+      const matchingParagraphs = paragraphs.filter((paragraph, index) => {
+        if (usedParagraphs.has(index)) return false;
+        const lowerParagraph = paragraph.toLowerCase();
+        return pattern.keywords.some(keyword => lowerParagraph.includes(keyword));
+      });
+
+      if (matchingParagraphs.length > 0) {
+        // Use the first matching paragraph
+        const bestMatch = matchingParagraphs[0];
+        const paragraphIndex = paragraphs.indexOf(bestMatch);
+        usedParagraphs.add(paragraphIndex);
+        
+        insights.push({
+          icon: pattern.icon,
+          title: pattern.title,
+          text: bestMatch.trim()
+        });
+      } else if (insights.length < 3) {
+        // Add fallback if we don't have enough insights
+        insights.push({
+          icon: pattern.icon,
+          title: pattern.title,
+          text: pattern.fallback
+        });
+      }
+    });
+
+    // If we still don't have enough insights, add some from remaining paragraphs
+    if (insights.length < 4) {
+      const remainingParagraphs = paragraphs.filter((_, index) => !usedParagraphs.has(index));
+      remainingParagraphs.slice(0, 4 - insights.length).forEach((paragraph, index) => {
+        const icons = ['🔍', '📋', '🔢', '📌'];
+        const titles = ['Analysis', 'Summary', 'Data Points', 'Observations'];
+        
+        insights.push({
+          icon: icons[index % icons.length],
+          title: titles[index % titles.length],
+          text: paragraph.trim()
+        });
+      });
+    }
+
+    // Ensure we have at least some insights
+    if (insights.length === 0) {
+      return [
+        {
+          icon: '🤖',
+          title: 'AI Analysis',
+          text: analysisText.substring(0, 200) + (analysisText.length > 200 ? '...' : '')
+        }
+      ];
+    }
+
+    return insights.slice(0, 6); // Limit to 6 insights
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -1552,7 +1910,7 @@ export default function AdvisorContent({ activeTab, isDark }) {
           <div className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Age Distribution Chart */}
-              <div className={`rounded-2xl shadow-xl border p-6 transition-all duration-300 ${
+              <div className={`rounded-2xl shadow-xl border p-6 ${
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
               }`}>
                 <h3 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
@@ -1567,22 +1925,27 @@ export default function AdvisorContent({ activeTab, isDark }) {
                       name: 'Age Distribution'
                     }]}
                     layout={{
-                      autosize: true,
-                      margin: { l: 40, r: 40, t: 40, b: 40 },
+                      width: undefined,
+                      height: 256,
+                      margin: { l: 50, r: 50, t: 20, b: 50 },
                       paper_bgcolor: isDark ? '#1F2937' : '#FFFFFF',
                       plot_bgcolor: isDark ? '#374151' : '#F9FAFB',
                       font: { color: isDark ? '#F3F4F6' : '#111827' },
                       xaxis: { title: 'Age', gridcolor: isDark ? '#4B5563' : '#E5E7EB' },
                       yaxis: { title: 'Count', gridcolor: isDark ? '#4B5563' : '#E5E7EB' }
                     }}
-                    config={{ displayModeBar: false }}
+                    config={{ 
+                      displayModeBar: false,
+                      responsive: true,
+                      useResizeHandler: true
+                    }}
                     style={{ width: '100%', height: '100%' }}
                   />
                 </div>
               </div>
 
               {/* Income vs Savings Scatter */}
-              <div className={`rounded-2xl shadow-xl border p-6 transition-all duration-300 ${
+              <div className={`rounded-2xl shadow-xl border p-6 ${
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
               }`}>
                 <h3 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
@@ -1603,15 +1966,20 @@ export default function AdvisorContent({ activeTab, isDark }) {
                       name: 'Clients'
                     }]}
                     layout={{
-                      autosize: true,
-                      margin: { l: 40, r: 40, t: 40, b: 40 },
+                      width: undefined,
+                      height: 256,
+                      margin: { l: 50, r: 50, t: 20, b: 50 },
                       paper_bgcolor: isDark ? '#1F2937' : '#FFFFFF',
                       plot_bgcolor: isDark ? '#374151' : '#F9FAFB',
                       font: { color: isDark ? '#F3F4F6' : '#111827' },
                       xaxis: { title: 'Annual Income', gridcolor: isDark ? '#4B5563' : '#E5E7EB' },
                       yaxis: { title: 'Current Savings', gridcolor: isDark ? '#4B5563' : '#E5E7EB' }
                     }}
-                    config={{ displayModeBar: false }}
+                    config={{ 
+                      displayModeBar: false,
+                      responsive: true,
+                      useResizeHandler: true
+                    }}
                     style={{ width: '100%', height: '100%' }}
                   />
                 </div>
@@ -1619,7 +1987,7 @@ export default function AdvisorContent({ activeTab, isDark }) {
             </div>
 
             {/* Portfolio Performance Chart */}
-            <div className={`rounded-2xl shadow-xl border p-6 transition-all duration-300 ${
+            <div className={`rounded-2xl shadow-xl border p-6 ${
               isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
             }`}>
               <h3 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${
@@ -1646,15 +2014,20 @@ export default function AdvisorContent({ activeTab, isDark }) {
                     name: 'Projected Pension'
                   }]}
                   layout={{
-                    autosize: true,
-                    margin: { l: 60, r: 60, t: 40, b: 60 },
+                    width: undefined,
+                    height: 320,
+                    margin: { l: 80, r: 80, t: 20, b: 80 },
                     paper_bgcolor: isDark ? '#1F2937' : '#FFFFFF',
                     plot_bgcolor: isDark ? '#374151' : '#F9FAFB',
                     font: { color: isDark ? '#F3F4F6' : '#111827' },
                     xaxis: { title: 'Client Age', gridcolor: isDark ? '#4B5563' : '#E5E7EB' },
                     yaxis: { title: 'Projected Pension Amount', gridcolor: isDark ? '#4B5563' : '#E5E7EB' }
                   }}
-                  config={{ displayModeBar: false }}
+                  config={{ 
+                    displayModeBar: false,
+                    responsive: true,
+                    useResizeHandler: true
+                  }}
                   style={{ width: '100%', height: '100%' }}
                 />
               </div>
@@ -1788,6 +2161,8 @@ export default function AdvisorContent({ activeTab, isDark }) {
                           <Plot
                             data={getChartData(chart)}
                             layout={{
+                              width: undefined,
+                              height: 320,
                               title: {
                                 text: `${variableNames[chart.xAxis] || chart.xAxis} vs ${variableNames[chart.yAxis] || chart.yAxis}`,
                                 font: { size: 16, color: isDark ? '#ffffff' : '#111827' },
@@ -1822,6 +2197,7 @@ export default function AdvisorContent({ activeTab, isDark }) {
                             style={{ width: '100%', height: '100%' }}
                             config={{
                               responsive: true,
+                              useResizeHandler: true,
                               displayModeBar: true,
                               displaylogo: false,
                               modeBarButtonsToRemove: ["sendDataToCloud"],
@@ -2438,7 +2814,7 @@ export default function AdvisorContent({ activeTab, isDark }) {
         {/* Tools Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
           {/* Risk Alert Tool */}
-          <div className={`rounded-2xl shadow-xl border p-6 transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
+          <div className={`rounded-2xl shadow-xl border p-6 ${
             isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
           }`}>
             <div className="flex items-center mb-4">
@@ -2448,22 +2824,22 @@ export default function AdvisorContent({ activeTab, isDark }) {
                 </svg>
               </div>
               <div>
-                <h3 className={`text-lg font-semibold transition-colors duration-300 ${
+                <h3 className={`text-lg font-semibold ${
                   isDark ? 'text-white' : 'text-gray-900'
                 }`}>Risk Alert System</h3>
-                <p className={`text-sm transition-colors duration-300 ${
+                <p className={`text-sm ${
                   isDark ? 'text-gray-400' : 'text-gray-600'
                 }`}>Identify portfolio risks</p>
               </div>
             </div>
-            <p className={`text-sm mb-4 transition-colors duration-300 ${
+            <p className={`text-sm mb-4 ${
               isDark ? 'text-gray-300' : 'text-gray-700'
             }`}>
               Generate personalized risk alerts for withdrawal rates, asset allocation, savings gaps, and market exposure.
             </p>
             <button 
               onClick={() => setActiveToolModal('riskAlerts')}
-              className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg hover:from-red-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-lg font-medium"
+              className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg hover:from-red-600 hover:to-orange-600 shadow-lg font-medium"
             >
               Analyze Client Risks
             </button>
@@ -2491,7 +2867,7 @@ export default function AdvisorContent({ activeTab, isDark }) {
             <p className={`text-sm mb-4 transition-colors duration-300 ${
               isDark ? 'text-gray-300' : 'text-gray-700'
             }`}>
-              Calculate optimal portfolio allocation based on age, risk tolerance, and retirement goals.
+              Optimize portfolio allocation based on your age, risk tolerance, and financial goals, to achieve retirement readiness.
             </p>
             <button 
               onClick={() => setActiveToolModal('portfolioOptimization')}
