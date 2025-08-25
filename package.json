@@ -2,7 +2,6 @@
   "name": "mufg-pension-insights",
   "version": "1.0.0",
   "description": "Pension Insights Platform - Frontend UI",
-  "description": "Pension Insights Platform - Backend API",
   "private": true,
   "packageManager": "pnpm@8.0.0",
   "scripts": {

@@ -4,7 +4,7 @@
  * Quick Database Connection Test
  */
 
-import db from './src/config/database.js';
+import db from '../src/config/database.js';
 
 async function testDatabase() {
   console.log('🔍 Testing database connection...');
