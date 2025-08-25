@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { usePensionData, useUserProfile } from '../../lib/hooks';
+import { useChatbot } from '../../hooks/useApi';
 import DataService from '../../lib/dataService';
 import ChatbotService from '../../lib/chatbotService';
 
@@ -221,212 +222,232 @@ export default function MemberContent({ activeTab, isDark, onToggleDark, current
 
 
   function ChatbotAssistant({ isDark }) {
+    const { messages, sendMessage, loading } = useChatbot();
     const [open, setOpen] = useState(false);
-    const [messages, setMessages] = useState([
-      { from: 'bot', text: 'Hi! I\'m your pension assistant. I can help you understand your retirement savings, projections, and answer questions about your pension data. How can I assist you today?' }
-    ]);
     const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
 
     const handleSend = async () => {
-      if (!input.trim() || isLoading) return;
+      if (!input.trim() || loading) return;
       
-      const userMessage = input.trim();
+      // Provide member context for better responses
+      const memberContext = {
+        isAdvisor: false,
+        role: 'member',
+        capabilities: ['balance_inquiry', 'contribution_planning', 'retirement_projections', 'personal_advice'],
+        dataAccess: 'individual',
+        userData: data.length > 0 ? data[0] : null
+      };
+      
+      await sendMessage(input, memberContext);
       setInput('');
-      setMessages(prev => [...prev, { from: 'user', text: userMessage }]);
-      setIsLoading(true);
-
-      try {
-        // Show thinking indicator immediately
-        setMessages(prev => [...prev, { from: 'bot', text: 'Thinking...', isThinking: true }]);
-        
-        // Create context from current user data
-        const context = {
-          hasData: data.length > 0,
-          userRole: 'member',
-          currentSavings: data.length > 0 ? data[0].current_savings : null,
-          projectedPension: data.length > 0 ? data[0].projected_pension_amount : null,
-          age: data.length > 0 ? data[0].age : null,
-          retirementAge: data.length > 0 ? data[0].retirement_age_goal : null,
-          annualReturn: data.length > 0 ? data[0].annual_return_rate : null,
-          yearsContributed: data.length > 0 ? data[0].years_contributed : null
-        };
-
-        const response = await ChatbotService.sendMessage(userMessage, context);
-        
-        // Remove thinking indicator and add real response
-        setMessages(prev => prev.slice(0, -1));
-        
-        // Handle different response structures
-        let responseText = '';
-        if (typeof response === 'string') {
-          responseText = response;
-        } else if (response && response.data && response.data.message) {
-          // Backend API structure: { success: true, data: { message: "...", ... } }
-          responseText = response.data.message;
-        } else if (response && response.message) {
-          responseText = response.message;
-        } else if (response && response.response) {
-          responseText = response.response;
-        } else {
-          console.log('Unexpected response structure:', response);
-          responseText = 'I apologize, but I\'m having trouble processing your request right now. Please try again later.';
-        }
-        
-        setMessages(prev => [...prev, { 
-          from: 'bot', 
-          text: responseText
-        }]);
-      } catch (error) {
-        console.error('Chatbot error:', error);
-        // Remove thinking indicator
-        setMessages(prev => prev.slice(0, -1));
-        // Provide intelligent fallback responses
-        const fallbackResponse = generateFallbackResponse(userMessage, data);
-        setMessages(prev => [...prev, { from: 'bot', text: fallbackResponse }]);
-      } finally {
-        setIsLoading(false);
-      }
     };
 
-    // Generate intelligent fallback responses when API is unavailable
-    const generateFallbackResponse = (message, userData) => {
-      const lowerMessage = message.toLowerCase();
-      
-      if (userData.length === 0) {
-        return "I notice we don't have your pension data loaded yet. Please ensure you're logged in and your data is available to get personalized advice.";
-      }
-
-      const user = userData[0];
-      
-      if (lowerMessage.includes('saving') || lowerMessage.includes('balance')) {
-        return `Based on your current data, you have $${user.current_savings?.toLocaleString() || 'N/A'} in savings. This is a good foundation for your retirement planning!`;
-      }
-      
-      if (lowerMessage.includes('pension') || lowerMessage.includes('retirement')) {
-        return `Your projected pension amount is $${user.projected_pension_amount?.toLocaleString() || 'N/A'}. You're currently ${user.retirement_age_goal - user.age || 'N/A'} years away from your retirement goal at age ${user.retirement_age_goal || 'N/A'}.`;
-      }
-      
-      if (lowerMessage.includes('return') || lowerMessage.includes('rate')) {
-        return `Your portfolio is showing an annual return rate of ${parseFloat(user.annual_return_rate || 0).toFixed(1)}%. This is ${parseFloat(user.annual_return_rate) > 5 ? 'performing well' : 'moderate'} for pension investments.`;
-      }
-      
-      if (lowerMessage.includes('contribute') || lowerMessage.includes('contribution')) {
-        return `You're currently contributing $${user.contribution_amount?.toLocaleString() || 'N/A'} per contribution, with $${user.employer_contribution?.toLocaleString() || 'N/A'} employer contribution. Consider maximizing employer matching if available!`;
-      }
-      
-      if (lowerMessage.includes('goal') || lowerMessage.includes('target')) {
-        const yearsToRetirement = user.retirement_age_goal - user.age;
-        return `You're planning to retire at ${user.retirement_age_goal}, which is ${yearsToRetirement} years from now. Your current trajectory projects $${user.projected_pension_amount?.toLocaleString() || 'N/A'} for retirement.`;
-      }
-
-      return `I understand you're asking about "${message}". While I'd love to provide more detailed analysis, I'm currently operating in offline mode. Based on your pension data, you have $${user.current_savings?.toLocaleString() || 'N/A'} in current savings and are projected to have $${user.projected_pension_amount?.toLocaleString() || 'N/A'} at retirement. Is there something specific about these numbers you'd like to discuss?`;
-    };
-
-  // Detect dark mode from body class
-  return (
-    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}>
-      <div
-        style={{
-          display: open ? 'block' : 'none',
-          width: 320,
-          background: isDark ? '#1f2937' : '#fff',
-          borderRadius: 12,
-          boxShadow: '0 2px 16px rgba(0,0,0,0.12)',
-          padding: 16,
-          color: isDark ? '#f3f4f6' : '#111827',
-          border: isDark ? '1px solid #374151' : 'none'
-        }}
-      >
-        <div style={{ fontWeight: 600, marginBottom: 8, color: isDark ? '#f3f4f6' : '#111827' }}>Chatbot Assistant</div>
-        <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 8 }}>
-          {messages.map((msg, i) => (
-            <div key={i} style={{ textAlign: msg.from === 'bot' ? 'left' : 'right', marginBottom: 4 }}>
-              <span style={{
-                background: msg.from === 'bot'
-                  ? (isDark ? '#374151' : '#f3f4f6')
-                  : (isDark ? '#047857' : '#d1fae5'),
-                color: msg.from === 'bot'
-                  ? (isDark ? '#f3f4f6' : '#111827')
-                  : (isDark ? '#fff' : '#047857'),
-                padding: '6px 12px',
-                borderRadius: 8,
-                display: 'inline-block',
-                fontWeight: msg.from === 'bot' ? 500 : 400,
-                maxWidth: '90%',
-                wordWrap: 'break-word',
-                opacity: msg.isThinking ? 0.8 : 1
-              }}>
-                {msg.isThinking ? (
-                  <span style={{ fontStyle: 'italic' }}>
-                    Thinking<span style={{ 
-                      animation: 'pulse 1.5s ease-in-out infinite',
-                      opacity: 0.6 
-                    }}>...</span>
-                  </span>
-                ) : (
-                  msg.text
-                )}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex' }}>
-          <input
-            style={{
-              flex: 1,
-              border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-              borderRadius: 8,
-              padding: 6,
-              marginRight: 4,
-              background: isDark ? '#111827' : '#fff',
+    return (
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}>
+        <div
+          style={{
+            display: open ? 'block' : 'none',
+            width: 380,
+            maxHeight: 500,
+            background: isDark ? '#1f2937' : '#fff',
+            borderRadius: 12,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Header */}
+          <div style={{
+            background: isDark ? '#374151' : '#f9fafb',
+            padding: '12px 16px',
+            borderBottom: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'
+          }}>
+            <div style={{ 
+              fontWeight: 600, 
               color: isDark ? '#f3f4f6' : '#111827',
-              outline: 'none',
-              opacity: isLoading ? 0.5 : 1
-            }}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !isLoading) handleSend(); }}
-            placeholder={isLoading ? "Processing..." : "Ask about your pension..."}
-            disabled={isLoading}
-          />
-          <button
-            style={{
-              background: isLoading ? (isDark ? '#374151' : '#e5e7eb') : (isDark ? '#10b981' : '#10b981'),
-              color: isLoading ? (isDark ? '#6b7280' : '#9ca3af') : '#fff',
-              borderRadius: 8,
-              padding: '6px 12px',
-              fontWeight: 600,
-              border: 'none',
-              boxShadow: isLoading ? 'none' : (isDark ? '0 2px 8px rgba(16,185,129,0.15)' : '0 2px 8px rgba(16,185,129,0.12)'),
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.5 : 1
-            }}
-            onClick={handleSend}
-            disabled={isLoading}
-          >
-            {isLoading ? '...' : 'Send'}
-          </button>
+              fontSize: '14px'
+            }}>💰 AI Pension Assistant</div>
+            <div style={{
+              fontSize: '12px',
+              color: isDark ? '#9ca3af' : '#6b7280',
+              marginTop: '2px'
+            }}>Your personal retirement advisor</div>
+          </div>
+
+          {/* Messages */}
+          <div style={{ 
+            maxHeight: 320, 
+            overflowY: 'auto', 
+            padding: '12px',
+            background: isDark ? '#1f2937' : '#ffffff'
+          }}>
+            {messages.map((msg, i) => (
+              <div key={i} style={{ 
+                textAlign: msg.from === 'bot' ? 'left' : 'right', 
+                marginBottom: 12 
+              }}>
+                <div style={{
+                  display: 'inline-block',
+                  maxWidth: '85%',
+                  background: msg.from === 'bot'
+                    ? (isDark ? '#374151' : '#f3f4f6')
+                    : (isDark ? '#059669' : '#10b981'),
+                  color: msg.from === 'bot'
+                    ? (isDark ? '#f3f4f6' : '#111827')
+                    : '#ffffff',
+                  padding: '8px 12px',
+                  borderRadius: msg.from === 'bot' ? '12px 12px 12px 4px' : '12px 12px 4px 12px',
+                  fontSize: '13px',
+                  lineHeight: '1.4',
+                  wordWrap: 'break-word',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {msg.from === 'bot' && (
+                    <div style={{ 
+                      fontSize: '11px', 
+                      opacity: 0.7, 
+                      marginBottom: '4px',
+                      fontWeight: 500
+                    }}>AI Assistant</div>
+                  )}
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div style={{ textAlign: 'left', marginBottom: 12 }}>
+                <div style={{
+                  display: 'inline-block',
+                  background: isDark ? '#374151' : '#f3f4f6',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  padding: '8px 12px',
+                  borderRadius: '12px 12px 12px 4px',
+                  fontSize: '13px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{
+                      width: 12,
+                      height: 12,
+                      border: '2px solid',
+                      borderColor: isDark ? '#9ca3af transparent #9ca3af transparent' : '#6b7280 transparent #6b7280 transparent',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      marginRight: 8
+                    }}></div>
+                    Analyzing your pension data...
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div style={{ 
+            padding: '12px',
+            borderTop: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+            background: isDark ? '#1f2937' : '#ffffff'
+          }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Ask about your balance, contributions, projections..."
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  border: isDark ? '1px solid #374151' : '1px solid #d1d5db',
+                  borderRadius: 6,
+                  background: isDark ? '#374151' : '#fff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: 13,
+                  outline: 'none'
+                }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={loading || !input.trim()}
+                style={{
+                  padding: '8px 12px',
+                  background: loading || !input.trim() 
+                    ? (isDark ? '#374151' : '#e5e7eb')
+                    : '#10b981',
+                  color: loading || !input.trim() 
+                    ? (isDark ? '#6b7280' : '#9ca3af') 
+                    : '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  transition: 'all 0.2s'
+                }}
+              >
+                {loading ? '...' : '→'}
+              </button>
+            </div>
+            
+            {/* Quick suggestions */}
+            <div style={{ 
+              marginTop: 8, 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: 4 
+            }}>
+              {['Check my balance', 'Retirement projections', 'Optimize contributions'].map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setInput(suggestion)}
+                  style={{
+                    padding: '4px 8px',
+                    background: isDark ? '#374151' : '#f3f4f6',
+                    color: isDark ? '#d1d5db' : '#6b7280',
+                    border: 'none',
+                    borderRadius: 4,
+                    fontSize: 11,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+
+        <button
+          onClick={() => setOpen(!open)}
+          style={{
+            width: 56,
+            height: 56,
+            background: isDark ? '#059669' : '#10b981',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 20,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            transition: 'all 0.2s'
+          }}
+          title="AI Pension Assistant"
+        >
+          {open ? '×' : '💰'}
+        </button>
+
+        {/* Add CSS animation */}
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
-      <button
-        style={{
-          background: isDark ? '#047857' : '#047857',
-          color: '#fff',
-          borderRadius: '50%',
-          width: 56,
-          height: 56,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-          fontSize: 28,
-          border: 'none',
-          cursor: 'pointer'
-        }}
-        onClick={() => setOpen(o => !o)}
-        aria-label="Open chatbot"
-      >💬</button>
-    </div>
-  );
-}
+    );
+  }
 
   // PDF
   const exportToPDF = async () => {

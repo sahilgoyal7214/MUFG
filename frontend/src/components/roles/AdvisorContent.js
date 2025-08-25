@@ -13,7 +13,16 @@ function ChatbotAssistant({ isDark }) {
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
-    await sendMessage(input);
+    
+    // Provide advisor context for better responses
+    const advisorContext = {
+      isAdvisor: true,
+      role: 'advisor',
+      capabilities: ['portfolio_analysis', 'client_insights', 'risk_assessment', 'retirement_planning'],
+      dataAccess: 'aggregated'
+    };
+    
+    await sendMessage(input, advisorContext);
     setInput('');
   };
 
@@ -22,66 +31,172 @@ function ChatbotAssistant({ isDark }) {
       <div
         style={{
           display: open ? 'block' : 'none',
-          width: 320,
+          width: 380,
+          maxHeight: 500,
           background: isDark ? '#1f2937' : '#fff',
           borderRadius: 12,
-          boxShadow: '0 2px 16px rgba(0,0,0,0.12)',
-          padding: 16,
-          color: isDark ? '#f3f4f6' : '#111827',
-          border: isDark ? '1px solid #374151' : 'none'
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+          overflow: 'hidden'
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 8, color: isDark ? '#f3f4f6' : '#111827' }}>AI Assistant</div>
-        <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 8 }}>
+        {/* Header */}
+        <div style={{
+          background: isDark ? '#374151' : '#f9fafb',
+          padding: '12px 16px',
+          borderBottom: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'
+        }}>
+          <div style={{ 
+            fontWeight: 600, 
+            color: isDark ? '#f3f4f6' : '#111827',
+            fontSize: '14px'
+          }}>💬 AI Pension Advisor</div>
+          <div style={{
+            fontSize: '12px',
+            color: isDark ? '#9ca3af' : '#6b7280',
+            marginTop: '2px'
+          }}>Specialized for advisor insights</div>
+        </div>
+
+        {/* Messages */}
+        <div style={{ 
+          maxHeight: 320, 
+          overflowY: 'auto', 
+          padding: '12px',
+          background: isDark ? '#1f2937' : '#ffffff'
+        }}>
           {messages.map((msg, i) => (
-            <div key={i} style={{ textAlign: msg.from === 'bot' ? 'left' : 'right', marginBottom: 4 }}>
-              <span style={{
+            <div key={i} style={{ 
+              textAlign: msg.from === 'bot' ? 'left' : 'right', 
+              marginBottom: 12 
+            }}>
+              <div style={{
+                display: 'inline-block',
+                maxWidth: '85%',
                 background: msg.from === 'bot'
                   ? (isDark ? '#374151' : '#f3f4f6')
-                  : (isDark ? '#047857' : '#d1fae5'),
+                  : (isDark ? '#1d4ed8' : '#3b82f6'),
                 color: msg.from === 'bot'
                   ? (isDark ? '#f3f4f6' : '#111827')
-                  : (isDark ? '#fff' : '#047857'),
-                padding: '6px 12px',
-                borderRadius: 8,
-                display: 'inline-block',
-                fontWeight: msg.from === 'bot' ? 500 : 400
-              }}>{msg.text}</span>
+                  : '#ffffff',
+                padding: '8px 12px',
+                borderRadius: msg.from === 'bot' ? '12px 12px 12px 4px' : '12px 12px 4px 12px',
+                fontSize: '13px',
+                lineHeight: '1.4',
+                wordWrap: 'break-word',
+                whiteSpace: 'pre-wrap'
+              }}>
+                {msg.from === 'bot' && (
+                  <div style={{ 
+                    fontSize: '11px', 
+                    opacity: 0.7, 
+                    marginBottom: '4px',
+                    fontWeight: 500
+                  }}>AI Advisor</div>
+                )}
+                {msg.text}
+              </div>
             </div>
           ))}
+          {loading && (
+            <div style={{ textAlign: 'left', marginBottom: 12 }}>
+              <div style={{
+                display: 'inline-block',
+                background: isDark ? '#374151' : '#f3f4f6',
+                color: isDark ? '#f3f4f6' : '#111827',
+                padding: '8px 12px',
+                borderRadius: '12px 12px 12px 4px',
+                fontSize: '13px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    width: 12,
+                    height: 12,
+                    border: '2px solid',
+                    borderColor: isDark ? '#9ca3af transparent #9ca3af transparent' : '#6b7280 transparent #6b7280 transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    marginRight: 8
+                  }}></div>
+                  Analyzing portfolio data...
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask about portfolios..."
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              border: isDark ? '1px solid #374151' : '1px solid #d1d5db',
-              borderRadius: 8,
-              background: isDark ? '#374151' : '#fff',
-              color: isDark ? '#f3f4f6' : '#111827',
-              fontSize: 14
-            }}
-          />
-          <button
-            onClick={handleSend}
-            disabled={loading}
-            style={{
-              padding: '8px 12px',
-              background: '#047857',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: 14
-            }}
-          >
-            {loading ? '...' : 'Send'}
-          </button>
+
+        {/* Input */}
+        <div style={{ 
+          padding: '12px',
+          borderTop: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+          background: isDark ? '#1f2937' : '#ffffff'
+        }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Ask about client portfolios, risk analysis..."
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: isDark ? '1px solid #374151' : '1px solid #d1d5db',
+                borderRadius: 6,
+                background: isDark ? '#374151' : '#fff',
+                color: isDark ? '#f3f4f6' : '#111827',
+                fontSize: 13,
+                outline: 'none'
+              }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={loading || !input.trim()}
+              style={{
+                padding: '8px 12px',
+                background: loading || !input.trim() 
+                  ? (isDark ? '#374151' : '#e5e7eb')
+                  : '#3b82f6',
+                color: loading || !input.trim() 
+                  ? (isDark ? '#6b7280' : '#9ca3af') 
+                  : '#fff',
+                border: 'none',
+                borderRadius: 6,
+                cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                transition: 'all 0.2s'
+              }}
+            >
+              {loading ? '...' : '→'}
+            </button>
+          </div>
+          
+          {/* Quick suggestions */}
+          <div style={{ 
+            marginTop: 8, 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: 4 
+          }}>
+            {['Portfolio overview', 'Risk analysis', 'Client insights'].map((suggestion, idx) => (
+              <button
+                key={idx}
+                onClick={() => setInput(suggestion)}
+                style={{
+                  padding: '4px 8px',
+                  background: isDark ? '#374151' : '#f3f4f6',
+                  color: isDark ? '#d1d5db' : '#6b7280',
+                  border: 'none',
+                  borderRadius: 4,
+                  fontSize: 11,
+                  cursor: 'pointer'
+                }}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -90,7 +205,7 @@ function ChatbotAssistant({ isDark }) {
         style={{
           width: 56,
           height: 56,
-          background: '#047857',
+          background: isDark ? '#1d4ed8' : '#3b82f6',
           color: '#fff',
           border: 'none',
           borderRadius: '50%',
@@ -98,12 +213,22 @@ function ChatbotAssistant({ isDark }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 24,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          fontSize: 20,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          transition: 'all 0.2s'
         }}
+        title="AI Pension Advisor"
       >
-        {open ? '×' : '💬'}
+        {open ? 'x' : '💬'}
       </button>
+
+      {/* Add CSS animation */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -88,7 +88,7 @@ class ApiService {
 
   // Chatbot API
   async sendChatMessage(message, context = {}) {
-    return this.request('/chatbot', {
+    return this.request('/chatbot/message', {
       method: 'POST',
       body: JSON.stringify({ message, context }),
     });

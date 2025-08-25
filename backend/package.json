@@ -12,7 +12,8 @@
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
     "migrate": "node database/migrate.js",
-    "seed": "node database/seed.js"
+    "seed": "node database/seed.js",
+    "build": "echo 'No build step required for Express.js'"
   },
   "dependencies": {
     "axios": "^1.11.0",

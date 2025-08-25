@@ -191,9 +191,24 @@ export function useChatbot() {
 
     try {
       const response = await apiService.sendChatMessage(message, context);
+      console.log('Full chatbot response:', response); // Debug log
+      
+      // Extract message from the response structure
+      let botResponseText = 'I received your message!'; // fallback
+      
+      if (response.data && response.data.message) {
+        botResponseText = response.data.message;
+      } else if (response.message) {
+        botResponseText = response.message;
+      } else if (response.response) {
+        botResponseText = response.response;
+      }
+      
       const botMessage = { 
         from: 'bot', 
-        text: response.response || response.message || 'I received your message!' 
+        text: botResponseText,
+        intent: response.data?.intent,
+        suggestions: response.data?.suggestions
       };
       setMessages(prev => [...prev, botMessage]);
     } catch (err) {
